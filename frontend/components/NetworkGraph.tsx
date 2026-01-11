@@ -80,7 +80,7 @@ export default function NetworkGraph({ job, selectedStage, onStageSelect, compac
         <div className={`flex items-center ${compact ? 'gap-2' : 'gap-4'} min-w-max`} onMouseLeave={handleMouseLeave}>
           {/* Layer nodes */}
           {layers.map((layer: any, index: number) => {
-            const isSelected = selectedLayer === layer.name
+            const isSelected = selectedStage === layer.stage
             const isHovered = hoveredLayer === layer.name
             const shapeStr = `${layer.shape.c}×${layer.shape.h}×${layer.shape.w}`
 

@@ -164,6 +164,7 @@ async def get_job_status(job_id: str):
     # Build response
     response = JobResultResponse(
         job_id=job.job_id,
+        status=JobStatus.SUCCEEDED,
         model=ModelInfo(id=job.model_id, display_name=model_display_name),
         input=InputInfo(image_url=f"/static/{job_id}/input.png"),
         prediction=PredictionInfo(topk=prediction_classes),

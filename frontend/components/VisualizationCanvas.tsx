@@ -2,19 +2,9 @@
 
 import { JobResponse } from '@/lib/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 interface VisualizationCanvasProps {
   job: JobResponse
   selectedStage: string | null
-}
-
-// Helper function to convert relative static URLs to absolute URLs
-function getImageUrl(url: string): string {
-  if (url.startsWith('/static/')) {
-    return `${API_BASE_URL}${url}`
-  }
-  return url
 }
 
 export default function VisualizationCanvas({ job, selectedStage }: VisualizationCanvasProps) {
@@ -69,7 +59,7 @@ export default function VisualizationCanvas({ job, selectedStage }: Visualizatio
                 >
                   <div className="aspect-square bg-gray-100 flex items-center justify-center relative">
                     <img
-                      src={getImageUrl(channel.image_url)}
+                      src={channel.image_url}
                       alt={`Channel ${channel.channel}`}
                       className="w-full h-full object-contain"
                       onError={(e) => {

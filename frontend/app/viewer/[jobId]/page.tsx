@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import JobStatusBanner from '@/components/JobStatusBanner'
 import NetworkGraph from '@/components/NetworkGraph'
@@ -11,8 +11,6 @@ import FeatureMapGrid from '@/components/FeatureMapGrid'
 import HeatmapOverlay from '@/components/HeatmapOverlay'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { getJobStatus, JobResponse, createJob, getModels, Model } from '@/lib/api'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 function ViewerPageContent() {
   const params = useParams()
@@ -48,8 +46,7 @@ function ViewerPageContent() {
 
   // Convert image URL to File for job creation
   const urlToFile = async (url: string): Promise<File> => {
-    const fullUrl = url.startsWith('/static/') ? `${API_BASE_URL}${url}` : url
-    const response = await fetch(fullUrl)
+    const response = await fetch(url)
     const blob = await response.blob()
     const filename = url.split('/').pop() || 'image.png'
     return new File([blob], filename, { type: blob.type || 'image/png' })
@@ -162,47 +159,6 @@ function ViewerPageContent() {
     }
   }, [jobId])
 
-  if (!job) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading job...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error && job.status === 'failed') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-          <div className="text-red-600 mb-4">
-            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Job Failed</h2>
-          <p className="text-gray-600 mb-4">{job.message || error}</p>
-          <button
-            onClick={() => window.history.back()}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Helper function to get top-1 prediction
-  const getTopPrediction = (jobData: JobResponse | null) => {
-    if (!jobData || jobData.status !== 'succeeded') return null
-    const data = jobData as any
-    const prediction = data.prediction?.topk?.[0]
-    return prediction || null
-  }
-
   // Helper function to extract available stages from layers
   const getAvailableStages = (jobData: JobResponse | null): string[] => {
     if (!jobData || jobData.status !== 'succeeded') return []
@@ -216,26 +172,8 @@ function ViewerPageContent() {
     return stages
   }
 
-  // Helper function to find layer by stage in a job
-  const findLayerByStage = (jobData: JobResponse | null, stage: string | null) => {
-    if (!jobData || jobData.status !== 'succeeded' || !stage) return null
-    const data = jobData as any
-    const layers = data.layers || []
-    return layers.find((l: any) => l.stage === stage) || null
-  }
-
-  // Calculate diff summary
-  const job1Pred = getTopPrediction(job)
-  const job2Pred = getTopPrediction(secondJob)
-  const confidenceDelta =
-    job1Pred && job2Pred
-      ? Math.abs(job1Pred.prob - job2Pred.prob) * 100
-      : null
-
-  // Get job data and available stages
-  const jobData = job as any
-  const secondJobData = secondJob as any
-  const availableStages = getAvailableStages(job)
+  // Compute available stages using useMemo
+  const availableStages = useMemo(() => getAvailableStages(job), [job])
 
   // Auto-advance state
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
@@ -325,6 +263,67 @@ function ViewerPageContent() {
   const toggleAutoAdvance = useCallback(() => {
     setIsAutoAdvancing((prev) => !prev)
   }, [])
+
+  if (!job) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading job...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && job.status === 'failed') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+          <div className="text-red-600 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Job Failed</h2>
+          <p className="text-gray-600 mb-4">{job.message || error}</p>
+          <button
+            onClick={() => window.history.back()}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Helper function to get top-1 prediction
+  const getTopPrediction = (jobData: JobResponse | null) => {
+    if (!jobData || jobData.status !== 'succeeded') return null
+    const data = jobData as any
+    const prediction = data.prediction?.topk?.[0]
+    return prediction || null
+  }
+
+  // Helper function to find layer by stage in a job
+  const findLayerByStage = (jobData: JobResponse | null, stage: string | null) => {
+    if (!jobData || jobData.status !== 'succeeded' || !stage) return null
+    const data = jobData as any
+    const layers = data.layers || []
+    return layers.find((l: any) => l.stage === stage) || null
+  }
+
+  // Calculate diff summary
+  const job1Pred = getTopPrediction(job)
+  const job2Pred = getTopPrediction(secondJob)
+  const confidenceDelta =
+    job1Pred && job2Pred
+      ? Math.abs(job1Pred.prob - job2Pred.prob) * 100
+      : null
+
+  // Get job data
+  const jobData = job as any
+  const secondJobData = secondJob as any
 
   return (
     <div className="flex flex-col h-screen">

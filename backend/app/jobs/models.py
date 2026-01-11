@@ -91,6 +91,7 @@ class TimingsInfo(BaseModel):
 class JobResultResponse(BaseModel):
     """Job result response schema for SUCCEEDED jobs."""
     job_id: str
+    status: JobStatus = Field(default=JobStatus.SUCCEEDED, description="Job status (always 'succeeded' for this response type)")
     model: ModelInfo
     input: InputInfo
     prediction: PredictionInfo

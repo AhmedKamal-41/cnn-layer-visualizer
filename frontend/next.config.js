@@ -6,12 +6,9 @@ const nextConfig = {
   // Configure API proxy/rewrites for backend
   // This allows frontend to make API calls to /api/* which will be proxied to the backend
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
     return [
-      {
-        source: '/api/:path*',
-        destination: `${backendUrl}/api/:path*`,
-      },
+      { source: "/api/v1/:path*", destination: "http://localhost:8000/api/v1/:path*" },
+      { source: "/static/:path*", destination: "http://localhost:8000/static/:path*" },
     ]
   },
 }

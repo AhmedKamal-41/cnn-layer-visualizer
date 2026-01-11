@@ -119,7 +119,7 @@ def generate_gradcam(
             cam_normalized = torch.zeros_like(cam)
         
         # Convert to numpy
-        cam_np = cam_normalized.cpu().numpy()
+        cam_np = cam_normalized.detach().cpu().numpy()
         
         # Resize to match original image size
         original_size = original_image.size  # (width, height)
@@ -369,8 +369,8 @@ def generate_gradcam_topk(
     
     # Get top-K classes
     top_probs, top_indices = torch.topk(probs[0], k=min(top_k, probs.shape[1]))
-    top_indices = top_indices.cpu().numpy()
-    top_probs = top_probs.cpu().numpy()
+    top_indices = top_indices.detach().cpu().numpy()
+    top_probs = top_probs.detach().cpu().numpy()
     
     # Create storage directory: STORAGE_DIR/{job_id}/cams/
     cams_dir = storage_dir / job_id / "cams"
@@ -396,7 +396,7 @@ def generate_gradcam_topk(
             cam_normalized = _compute_cam_from_activations_gradients(activations, gradients)
             
             # Convert to numpy
-            cam_np = cam_normalized.cpu().numpy()
+            cam_np = cam_normalized.detach().cpu().numpy()
             
             # Resize to match original image size
             cam_resized = np.array(Image.fromarray(cam_np).resize(original_size, Image.BILINEAR))

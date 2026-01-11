@@ -233,6 +233,11 @@ class JobService:
                     continue
                 
                 activation_tensor = activations_dict[layer_name]
+                # Skip non-4D activations (e.g., fc layer produces 2D tensor)
+                if activation_tensor.ndim != 4:
+                    logger.info(f"Skipping layer {layer_name}: ndim={activation_tensor.ndim} (expected 4D for feature maps)")
+                    continue
+                
                 # Get shape: [1, C, H, W]
                 shape = activation_tensor.shape
                 c, h, w = shape[1], shape[2], shape[3]

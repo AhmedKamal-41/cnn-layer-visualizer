@@ -3,19 +3,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { JobResponse } from '@/lib/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 interface FeatureMapGridProps {
   job: JobResponse | null
   selectedStage: string | null
-}
-
-// Helper function to convert relative static URLs to absolute URLs
-function getImageUrl(url: string): string {
-  if (url.startsWith('/static/')) {
-    return `${API_BASE_URL}${url}`
-  }
-  return url
 }
 
 // Skeleton placeholder component
@@ -149,12 +139,12 @@ export default function FeatureMapGrid({ job, selectedStage }: FeatureMapGridPro
     <>
       <div className="space-y-4 p-6">
         <h2 className="text-2xl font-bold text-gray-900">
-          Feature Maps: <span className="font-mono text-lg">{selectedLayer}</span>
+          Feature Maps: <span className="font-mono text-lg">{selectedLayerData?.name || selectedStage || 'No layer selected'}</span>
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {channels.map((channel: any, index: number) => {
             const isLoading = imageLoading.has(index)
-            const imageUrl = getImageUrl(channel.image_url)
+            const imageUrl = channel.image_url
 
             return (
               <div
@@ -238,7 +228,7 @@ export default function FeatureMapGrid({ job, selectedStage }: FeatureMapGridPro
             {/* Image Container */}
             <div className="flex-1 flex items-center justify-center p-4 bg-gray-50 relative">
               <img
-                src={getImageUrl(currentChannel.image_url)}
+                src={currentChannel.image_url}
                 alt={`Channel ${currentChannel.channel} feature map`}
                 className="max-w-full max-h-[70vh] object-contain"
                 onError={(e) => {

@@ -14,14 +14,12 @@ models:
       - "layer2"
       - "layer3"
       - "layer4"
-      - "fc"
     layer_stages:
       "conv1": "stage1"
       "layer1": "stage2"
       "layer2": "stage3"
       "layer3": "stage4"
       "layer4": "stage5"
-      "fc": "prediction"
 
   - id: "mobilenet_v2"
     display_name: "MobileNet V2"
@@ -37,7 +35,6 @@ models:
       - "features.6"
       - "features.13"
       - "features.17"
-      - "classifier.1"
     layer_stages:
       "features.0": "stage1"
       "features.1": "stage2"
@@ -46,7 +43,6 @@ models:
       "features.6": "stage4"
       "features.13": "stage4"
       "features.17": "stage5"
-      "classifier.1": "prediction"
 
   - id: "efficientnet_b0"
     display_name: "EfficientNet-B0"
@@ -62,7 +58,6 @@ models:
       - "features.4"
       - "features.5"
       - "features.6"
-      - "classifier.1"
     layer_stages:
       "features.0": "stage1"
       "features.1": "stage2"
@@ -71,5 +66,4 @@ models:
       "features.4": "stage4"
       "features.5": "stage4"
       "features.6": "stage5"
-      "classifier.1": "prediction"
 

@@ -3,19 +3,9 @@
 import { useState } from 'react'
 import { JobResponse } from '@/lib/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 interface HeatmapOverlayProps {
   job: JobResponse | null
   selectedStage: string | null
-}
-
-// Helper function to convert relative static URLs to absolute URLs
-function getImageUrl(url: string): string {
-  if (url.startsWith('/static/')) {
-    return `${API_BASE_URL}${url}`
-  }
-  return url
 }
 
 // Format probability as percentage
@@ -88,7 +78,7 @@ export default function HeatmapOverlay({ job, selectedStage }: HeatmapOverlayPro
       <div className="flex-1 relative bg-gray-100 rounded-lg overflow-hidden">
         {/* Input Image (Base Layer) */}
         <img
-          src={getImageUrl(inputImageUrl)}
+          src={inputImageUrl}
           alt="Input image"
           className="w-full h-full object-contain"
           onError={(e) => {
@@ -100,7 +90,7 @@ export default function HeatmapOverlay({ job, selectedStage }: HeatmapOverlayPro
         {/* CAM Overlay */}
         {selectedCam && (
           <img
-            src={getImageUrl(selectedCam.overlay_url)}
+            src={selectedCam.overlay_url}
             alt={`CAM overlay for ${selectedCam.class_name}`}
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             style={{

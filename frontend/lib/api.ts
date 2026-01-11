@@ -2,8 +2,6 @@
  * Backend API client using fetch()
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 export interface CreateJobRequest {
   image: File
   model_id: string
@@ -33,7 +31,7 @@ export interface HealthResponse {
  * Get list of available models
  */
 export async function getModels(): Promise<Model[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/models`)
+  const response = await fetch('/api/v1/models')
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
@@ -54,7 +52,7 @@ export async function createJob(
   formData.append('image', image)
   formData.append('model_id', modelId)
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/jobs`, {
+  const response = await fetch('/api/v1/jobs', {
     method: 'POST',
     body: formData,
   })
@@ -71,7 +69,7 @@ export async function createJob(
  * Get job status by job_id
  */
 export async function getJobStatus(jobId: string): Promise<JobResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/jobs/${jobId}`)
+  const response = await fetch(`/api/v1/jobs/${jobId}`)
 
   if (!response.ok) {
     if (response.status === 404) {
@@ -88,7 +86,7 @@ export async function getJobStatus(jobId: string): Promise<JobResponse> {
  * Health check endpoint
  */
 export async function getHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/health`)
+  const response = await fetch('/api/v1/health')
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)

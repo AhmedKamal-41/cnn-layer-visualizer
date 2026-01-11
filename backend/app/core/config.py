@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     
     # API Configuration
     API_V1_PREFIX: str = "/api/v1"
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
     # Storage Configuration
     STORAGE_DIR: Path = Path("./storage")
@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # Cache Configuration
     CACHE_ENABLED: bool = True
     CACHE_MAX_ITEMS: int = 100
+    
+    # Upload Configuration
+    MAX_UPLOAD_SIZE_MB: int = 10
     
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -39,7 +42,9 @@ class Settings(BaseSettings):
         """Parse CORS_ORIGINS from comma-separated string or list."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+        if isinstance(v, list):
+            return v
+        return []
     
     @field_validator("STORAGE_DIR", mode="after")
     @classmethod

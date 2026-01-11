@@ -2,6 +2,58 @@
 
 A full-stack web application for visualizing and analyzing CNN (Convolutional Neural Network) layer activations and feature maps. Upload images to visualize how different CNN layers process and extract features.
 
+## Quick Start
+
+### Option 1: Docker Compose (Recommended)
+
+```bash
+# From project root
+docker-compose up --build
+```
+
+Access:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+### Option 2: Manual Setup
+
+**Backend:**
+```bash
+cd backend
+python -m venv venv
+# Windows: venv\Scripts\activate
+# macOS/Linux: source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Frontend (in separate terminal):**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Smoke Test
+
+Run the backend smoke test to verify everything works:
+
+```bash
+cd backend
+# First, create sample image if needed
+python scripts/create_sample_image.py
+# Run smoke test (requires backend to be running)
+python scripts/smoke_test.py
+```
+
+The smoke test verifies:
+- Health endpoint
+- Models endpoint
+- Job creation
+- Job processing and completion
+- Result verification (layers, feature maps, CAM overlays)
+
 ## Project Overview
 
 CNN Lens provides an interactive platform to:

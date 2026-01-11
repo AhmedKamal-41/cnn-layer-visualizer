@@ -5,7 +5,21 @@ from typing import Optional, List, Dict, Any
 
 from app.models.registry import list_models, get_model_config
 from app.jobs.service import job_service
-from app.jobs.models import JobRecord
+from app.jobs.models import (
+    JobRecord,
+    JobStatus,
+    JobResultResponse,
+    ModelInfo,
+    InputInfo,
+    PredictionInfo,
+    PredictionClass,
+    LayerInfo,
+    LayerShape,
+    ChannelInfo,
+    CAMInfo,
+    TimingsInfo,
+)
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -39,6 +53,16 @@ async def create_job(
         image_bytes = await image.read()
         if len(image_bytes) == 0:
             raise HTTPException(status_code=400, detail="Image file is empty")
+        
+        # Validate file size (convert MB to bytes)
+        max_size_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+        if len(image_bytes) > max_size_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Image file too large. Maximum size is {settings.MAX_UPLOAD_SIZE_MB}MB"
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading image file: {str(e)}")
     

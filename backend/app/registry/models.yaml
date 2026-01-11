@@ -1,0 +1,31 @@
+# Model Registry Configuration
+# Define available PyTorch models for CNN inference
+
+models:
+  - id: "resnet18"
+    name: "ResNet-18"
+    type: "classification"
+    path: "torchvision.models.resnet18"
+    weights: "ResNet18_Weights.DEFAULT"
+    input_size: [224, 224]
+    num_classes: 1000
+    description: "ResNet-18 model from torchvision"
+    
+  - id: "resnet50"
+    name: "ResNet-50"
+    type: "classification"
+    path: "torchvision.models.resnet50"
+    weights: "ResNet50_Weights.DEFAULT"
+    input_size: [224, 224]
+    num_classes: 1000
+    description: "ResNet-50 model from torchvision"
+    
+  - id: "vgg16"
+    name: "VGG-16"
+    type: "classification"
+    path: "torchvision.models.vgg16"
+    weights: "VGG16_Weights.DEFAULT"
+    input_size: [224, 224]
+    num_classes: 1000
+    description: "VGG-16 model from torchvision"
+

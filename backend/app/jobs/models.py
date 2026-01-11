@@ -21,7 +21,7 @@ class JobResult(BaseModel):
     
     prediction: Any = Field(default=None, description="Model prediction output")
     layers_metadata: List[Dict[str, Any]] = Field(default_factory=list, description="Metadata for each layer")
-    assets_manifest: Dict[str, str] = Field(default_factory=dict, description="URLs/paths to generated assets")
+    assets_manifest: Dict[str, Any] = Field(default_factory=dict, description="URLs/paths to generated assets")
     timings: Dict[str, float] = Field(default_factory=dict, description="Timing information for different operations")
 
 

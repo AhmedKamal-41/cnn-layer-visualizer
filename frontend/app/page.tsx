@@ -104,7 +104,7 @@ export default function Home() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative py-16 md:py-20 lg:py-24 overflow-hidden">
+        <section className="relative py-24 md:py-28 lg:py-32 overflow-hidden">
           {/* Layered Background: Base gradient + Radial blobs + Grid pattern */}
           <div 
             className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50"
@@ -118,7 +118,7 @@ export default function Home() {
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-800 mb-8 leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-8 leading-tight">
                 Visualize how CNNs transform images into predictions
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 mb-10 leading-relaxed">
@@ -273,7 +273,7 @@ export default function Home() {
                 <div className="flex items-center justify-between p-6 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-lg border border-indigo-200/50">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Prediction</div>
-                    <div className="text-base md:text-lg font-semibold text-gray-900 truncate">Cat</div>
+                    <div className="text-base md:text-lg font-semibold text-gray-900 truncate">Golden Retriever</div>
                   </div>
                   <div className="ml-4 flex-shrink-0">
                     <div className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-lg md:text-xl font-bold rounded-lg shadow-md">

@@ -21,6 +21,25 @@ models:
       "layer3": "stage4"
       "layer4": "stage5"
 
+  - id: "resnet50"
+    display_name: "ResNet-50"
+    input_size: [224, 224]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "conv1"
+      - "layer1"
+      - "layer2"
+      - "layer3"
+      - "layer4"
+    layer_stages:
+      "conv1": "stage1"
+      "layer1": "stage2"
+      "layer2": "stage3"
+      "layer3": "stage4"
+      "layer4": "stage5"
+
   - id: "mobilenet_v2"
     display_name: "MobileNet V2"
     input_size: [224, 224]
@@ -43,6 +62,44 @@ models:
       "features.6": "stage4"
       "features.13": "stage4"
       "features.17": "stage5"
+
+  - id: "mobilenet_v3_small"
+    display_name: "MobileNet-V3 Small"
+    input_size: [224, 224]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "features.0"
+      - "features.2"
+      - "features.5"
+      - "features.8"
+      - "features.12"
+    layer_stages:
+      "features.0": "stage1"
+      "features.2": "stage2"
+      "features.5": "stage3"
+      "features.8": "stage4"
+      "features.12": "stage5"
+
+  - id: "mobilenet_v3_large"
+    display_name: "MobileNet-V3 Large"
+    input_size: [224, 224]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "features.0"
+      - "features.3"
+      - "features.6"
+      - "features.11"
+      - "features.16"
+    layer_stages:
+      "features.0": "stage1"
+      "features.3": "stage2"
+      "features.6": "stage3"
+      "features.11": "stage4"
+      "features.16": "stage5"
 
   - id: "efficientnet_b0"
     display_name: "EfficientNet-B0"
@@ -67,3 +124,97 @@ models:
       "features.5": "stage4"
       "features.6": "stage5"
 
+  - id: "efficientnet_b2"
+    display_name: "EfficientNet-B2"
+    input_size: [260, 260]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "features.0"
+      - "features.2"
+      - "features.4"
+      - "features.6"
+      - "features.8"
+    layer_stages:
+      "features.0": "stage1"
+      "features.2": "stage2"
+      "features.4": "stage3"
+      "features.6": "stage4"
+      "features.8": "stage5"
+
+  - id: "efficientnet_b3"
+    display_name: "EfficientNet-B3"
+    input_size: [300, 300]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "features.0"
+      - "features.2"
+      - "features.4"
+      - "features.6"
+      - "features.8"
+    layer_stages:
+      "features.0": "stage1"
+      "features.2": "stage2"
+      "features.4": "stage3"
+      "features.6": "stage4"
+      "features.8": "stage5"
+
+  - id: "densenet121"
+    display_name: "DenseNet-121"
+    input_size: [224, 224]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "features.conv0"
+      - "features.denseblock1"
+      - "features.denseblock2"
+      - "features.denseblock3"
+      - "features.denseblock4"
+    layer_stages:
+      "features.conv0": "stage1"
+      "features.denseblock1": "stage2"
+      "features.denseblock2": "stage3"
+      "features.denseblock3": "stage4"
+      "features.denseblock4": "stage5"
+
+  - id: "convnext_tiny"
+    display_name: "ConvNeXt-Tiny"
+    input_size: [224, 224]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "features.0"
+      - "features.2"
+      - "features.4"
+      - "features.6"
+      - "features.7"
+    layer_stages:
+      "features.0": "stage1"
+      "features.2": "stage2"
+      "features.4": "stage3"
+      "features.6": "stage4"
+      "features.7": "stage5"
+
+  - id: "shufflenet_v2_x1_0"
+    display_name: "ShuffleNet-V2"
+    input_size: [224, 224]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "conv1"
+      - "stage2"
+      - "stage3"
+      - "stage4"
+      - "conv5"
+    layer_stages:
+      "conv1": "stage1"
+      "stage2": "stage2"
+      "stage3": "stage3"
+      "stage4": "stage4"
+      "conv5": "stage5"

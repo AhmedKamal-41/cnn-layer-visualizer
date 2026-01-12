@@ -47,8 +47,16 @@ def load_model(model_id: str) -> torch.nn.Module:
     # Map model_id to torchvision model loading function
     model_mapping = {
         "resnet18": lambda: torchvision.models.resnet18(weights="DEFAULT"),
+        "resnet50": lambda: torchvision.models.resnet50(weights="DEFAULT"),
         "mobilenet_v2": lambda: torchvision.models.mobilenet_v2(weights="DEFAULT"),
+        "mobilenet_v3_small": lambda: torchvision.models.mobilenet_v3_small(weights="DEFAULT"),
+        "mobilenet_v3_large": lambda: torchvision.models.mobilenet_v3_large(weights="DEFAULT"),
         "efficientnet_b0": lambda: torchvision.models.efficientnet_b0(weights="DEFAULT"),
+        "efficientnet_b2": lambda: torchvision.models.efficientnet_b2(weights="DEFAULT"),
+        "efficientnet_b3": lambda: torchvision.models.efficientnet_b3(weights="DEFAULT"),
+        "densenet121": lambda: torchvision.models.densenet121(weights="DEFAULT"),
+        "convnext_tiny": lambda: torchvision.models.convnext_tiny(weights="DEFAULT"),
+        "shufflenet_v2_x1_0": lambda: torchvision.models.shufflenet_v2_x1_0(weights="DEFAULT"),
     }
     
     if model_id not in model_mapping:

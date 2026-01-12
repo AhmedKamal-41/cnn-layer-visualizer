@@ -222,10 +222,10 @@ class JobService:
             with torch.no_grad():
                 output = model(input_tensor)
             
-            # Get top-K predictions (for top-3 CAMs, we'll use top-3)
+            # Get top-K predictions (use top_k from job_params, but get at least top-5 for prediction display)
             probs = F.softmax(output, dim=1)
-            top_k = 3
-            top_probs, top_indices = torch.topk(probs[0], k=min(top_k, probs.shape[1]))
+            prediction_top_k = max(top_k, 5)  # Get at least top-5 predictions for display
+            top_probs, top_indices = torch.topk(probs[0], k=min(prediction_top_k, probs.shape[1]))
             top_indices = top_indices.cpu().numpy()
             top_probs = top_probs.cpu().numpy()
             

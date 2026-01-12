@@ -190,22 +190,44 @@ export default function Home() {
                   {/* Caption */}
                   <p className="text-xs text-gray-500 mb-4 uppercase tracking-wide text-center">Example CNN Explanation</p>
                   
-                  {/* Single Image */}
-                  <div className="mb-4">
-                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                      <img
-                        src="/workspaces/cnn-layer-visualizer/frontend/imgs/cat.jpg"
-                        alt="CNN analysis example"
-                        className="w-full h-full object-cover"
-                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                          // Fallback placeholder if image doesn't exist
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          if (target.parentElement) {
-                            target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Demo Image</div>'
-                          }
-                        }}
-                      />
+                  {/* Two Images Side-by-Side */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    {/* Original Image */}
+                    <div>
+                      <div className="text-xs font-medium text-gray-600 mb-2">Original</div>
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
+                        <img
+                          src="/imgs/cat.jpg"
+                          alt="Original image"
+                          className="w-full h-full object-contain"
+                          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            if (target.parentElement) {
+                              target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Demo Image</div>'
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Grad-CAM Heatmap */}
+                    <div>
+                      <div className="text-xs font-medium text-gray-600 mb-2">Grad-CAM</div>
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
+                        <img
+                          src="/imgs/cat_gradcam.png"
+                          alt="Grad-CAM heatmap"
+                          className="w-full h-full object-contain"
+                          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            if (target.parentElement) {
+                              target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Grad-CAM</div>'
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 

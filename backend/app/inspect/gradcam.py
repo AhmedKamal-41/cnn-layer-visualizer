@@ -1,5 +1,6 @@
 """Grad-CAM visualization utilities."""
 
+import json
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
@@ -13,6 +14,40 @@ from PIL import Image
 from app.inspect.hooks import get_layer_by_path
 
 logger = logging.getLogger("app.inspect.gradcam")
+
+# Cache for ImageNet class names
+_imagenet_class_names: Dict[int, str] = {}
+
+
+def _load_imagenet_class_names() -> Dict[int, str]:
+    """Load ImageNet class names from JSON file and cache them."""
+    global _imagenet_class_names
+    
+    if _imagenet_class_names:
+        return _imagenet_class_names
+    
+    # Get the path to the assets directory relative to this file
+    current_file = Path(__file__)
+    assets_path = current_file.parent.parent / "assets" / "imagenet_class_index.json"
+    
+    try:
+        with open(assets_path, "r") as f:
+            class_index = json.load(f)
+        
+        # Convert to {class_id: class_name} mapping
+        # Format: {"0": ["n10000000", "tench"], "1": ["n10000001", "goldfish"], ...}
+        _imagenet_class_names = {
+            int(class_id): class_data[1]  # class_data[1] is the class name
+            for class_id, class_data in class_index.items()
+        }
+        
+        logger.debug(f"Loaded {len(_imagenet_class_names)} ImageNet class names")
+        
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, IndexError) as e:
+        logger.warning(f"Failed to load ImageNet class names: {e}. Using class_{id} format.")
+        _imagenet_class_names = {}
+    
+    return _imagenet_class_names
 
 
 def generate_gradcam(
@@ -276,6 +311,46 @@ def _compute_cam_from_activations_gradients(
     return cam_normalized
 
 
+# Cache for ImageNet class names
+_imagenet_class_names: Dict[int, str] = {}
+
+
+def _load_imagenet_class_names() -> Dict[int, str]:
+    """Load ImageNet class names from JSON file and cache them."""
+    global _imagenet_class_names
+    
+    if _imagenet_class_names:
+        return _imagenet_class_names
+    
+    import json
+    from pathlib import Path
+    
+    # Get the path to the assets directory relative to this file
+    current_file = Path(__file__)
+    assets_path = current_file.parent.parent / "assets" / "imagenet_class_index.json"
+    
+    try:
+        with open(assets_path, "r") as f:
+            class_index = json.load(f)
+        
+        # Convert to {class_id: class_name} mapping
+        # Format: {"0": ["n10000000", "tench"], "1": ["n10000001", "goldfish"], ...}
+        _imagenet_class_names = {
+            int(class_id): class_data[1]  # class_data[1] is the class name
+            for class_id, class_data in class_index.items()
+        }
+        
+        logger = logging.getLogger("app.inspect.gradcam")
+        logger.debug(f"Loaded {len(_imagenet_class_names)} ImageNet class names")
+        
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        logger = logging.getLogger("app.inspect.gradcam")
+        logger.warning(f"Failed to load ImageNet class names: {e}. Using class_{id} format.")
+        _imagenet_class_names = {}
+    
+    return _imagenet_class_names
+
+
 def _get_imagenet_class_name(class_id: int) -> str:
     """
     Get ImageNet class name for a given class ID.
@@ -284,16 +359,12 @@ def _get_imagenet_class_name(class_id: int) -> str:
         class_id: Class ID (0-999)
         
     Returns:
-        Class name string (e.g., "golden retriever" or "class_285")
+        Class name string (e.g., "golden retriever")
     """
-    # ImageNet class names mapping (1000 classes)
-    # This is a simplified version - in production, load from a file or use torchvision's labels
-    # For now, return class_{id} format
-    # TODO: Load full ImageNet labels from file or torchvision.datasets.ImageNet
+    class_names = _load_imagenet_class_names()
     
-    # Common ImageNet class names for reference (subset)
-    # Full mapping would require loading ImageNet label file
-    return f"class_{class_id}"
+    # Return actual class name if available, otherwise fall back to class_{id}
+    return class_names.get(class_id, f"class_{class_id}")
 
 
 def apply_colormap(heatmap: np.ndarray) -> np.ndarray:

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import JobStatusBanner from '@/components/JobStatusBanner'
 import NetworkGraph from '@/components/NetworkGraph'
-import ArchitectureBar from '@/components/ArchitectureBar'
+import NetworkDiagram from '@/components/NetworkDiagram'
 import LayerPicker from '@/components/LayerPicker'
 import VisualizationCanvas from '@/components/VisualizationCanvas'
 import LayerInfoPanel from '@/components/LayerInfoPanel'
@@ -368,13 +368,21 @@ function ViewerPageContent() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Top: ArchitectureBar (only show if not in compare mode and job succeeded) */}
-      {!compareMode && job?.status === 'succeeded' && (
-        <ArchitectureBar
-          job={job}
-          selectedStage={selectedLayer}
-          onLayerSelect={setSelectedLayer}
-        />
+      {/* Top: NetworkDiagram (only show if not in compare mode and job succeeded) */}
+      {!compareMode && job?.status === 'succeeded' && layers.length > 0 && (
+        <div className="border-b bg-white px-6 py-4">
+          <NetworkDiagram
+            layers={layers}
+            selectedStage={selectedLayer}
+            onLayerSelect={setSelectedLayer}
+            inputImageUrl={jobData?.input?.image_url}
+            predictionLabel={getTopPrediction(job)?.class_name}
+            predictionProb={getTopPrediction(job)?.prob}
+          />
+          <p className="text-xs text-gray-500 text-center mt-3">
+            Click a layer to see what the CNN learns at that stage.
+          </p>
+        </div>
       )}
 
       {/* Status Banner */}

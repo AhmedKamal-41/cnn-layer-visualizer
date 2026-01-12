@@ -1,8 +1,93 @@
 # CNN Lens
 
-A full-stack web application for visualizing and analyzing CNN (Convolutional Neural Network) layer activations and feature maps. Upload images to visualize how different CNN layers process and extract features.
+A full-stack web application for visualizing and analyzing Convolutional Neural Network (CNN) layer activations, feature maps, and Grad-CAM heatmaps. CNN Lens provides an interactive platform for deep learning interpretability, enabling researchers and practitioners to understand how CNNs process and extract features from images.
+
+## Overview
+
+CNN Lens combines modern web technologies with PyTorch-based deep learning inference to deliver real-time visualization of CNN internal representations. The platform supports multiple pre-trained architectures from torchvision, including ResNet, MobileNet, EfficientNet, DenseNet, ConvNeXt, and ShuffleNet variants.
+
+### Key Features
+
+- **Multi-Model Support**: Analyze images with 11 pre-trained CNN architectures
+- **Layer-by-Layer Visualization**: Explore feature maps and activations at each network stage
+- **Grad-CAM Integration**: Generate class activation maps for model interpretability
+- **Model Comparison**: Compare predictions and visualizations across multiple models simultaneously
+- **Interactive Network Diagrams**: Visual representation of CNN architecture with layer selection
+- **Real-Time Processing**: Asynchronous job pipeline with status polling
+- **Production-Ready Architecture**: Docker containerization, API documentation, and comprehensive error handling
+
+## Tech Stack
+
+### Backend
+
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-009688) ![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C) ![Torchvision](https://img.shields.io/badge/Torchvision-0.16%2B-EE4C2C) ![NumPy](https://img.shields.io/badge/NumPy-1.26%2B-013243) ![Pillow](https://img.shields.io/badge/Pillow-10.1%2B-8BC34A) ![PyYAML](https://img.shields.io/badge/PyYAML-6.0%2B-FF6F00) ![Uvicorn](https://img.shields.io/badge/Uvicorn-0.24%2B-5A4FCF) ![Pydantic](https://img.shields.io/badge/Pydantic-2.1%2B-E92063) ![Aiofiles](https://img.shields.io/badge/Aiofiles-23.2%2B-4A90E2)
+
+### Frontend
+
+![Next.js](https://img.shields.io/badge/Next.js-14.0.4-000000) ![React](https://img.shields.io/badge/React-18.2%2B-61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-5.3%2B-3178C6) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4%2B-38B2AC) ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933)
+
+### Infrastructure
+
+![Docker](https://img.shields.io/badge/Docker-Latest-2496ED) ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2.0%2B-2496ED)
+
+### Deep Learning Models
+
+The platform supports the following pre-trained CNN architectures from torchvision:
+
+- **ResNet**: ResNet-18, ResNet-50
+- **MobileNet**: MobileNet V2, MobileNet V3 (Small, Large)
+- **EfficientNet**: EfficientNet-B0, EfficientNet-B2, EfficientNet-B3
+- **DenseNet**: DenseNet-121
+- **ConvNeXt**: ConvNeXt-Tiny
+- **ShuffleNet**: ShuffleNet-V2
+
+All models are pre-trained on ImageNet and loaded with default weights from torchvision.
+
+## Architecture
+
+### System Architecture
+
+CNN Lens follows a microservices architecture with clear separation between frontend and backend services:
+
+- **Backend Service**: FastAPI-based REST API providing inference endpoints, job management, and asset storage
+- **Frontend Service**: Next.js application with React components for user interaction and visualization
+- **Storage Layer**: File-based storage for generated visual assets (feature maps, Grad-CAM overlays)
+- **Model Registry**: YAML-based configuration system for managing model metadata and layer mappings
+
+### Backend Architecture
+
+The backend implements an asynchronous job processing pipeline:
+
+- **API Layer**: RESTful endpoints for job creation, status polling, and resource retrieval
+- **Job Service**: In-memory queue system with background worker for processing inference jobs
+- **Model Registry**: Centralized configuration for model metadata, preprocessing parameters, and layer mappings
+- **Inference Engine**: PyTorch-based model loading and forward pass execution
+- **Visualization Pipeline**: Feature map extraction, Grad-CAM generation, and asset serialization
+- **Cache Layer**: In-memory image hash caching to avoid reprocessing identical inputs
+- **Storage Service**: File system abstraction for persisting generated visual assets
+
+### Frontend Architecture
+
+The frontend implements a component-based React architecture:
+
+- **Page Router**: Next.js App Router for client-side routing and server-side rendering
+- **Component Library**: Modular React components for UI elements and visualization widgets
+- **State Management**: React hooks for local state and API client integration
+- **API Integration**: Type-safe API client with error handling and request/response typing
+- **Visualization Components**: Custom components for network diagrams, feature maps, and heatmap overlays
 
 ## Quick Start
+
+### Prerequisites
+
+- **Docker**: 20.10 or higher
+- **Docker Compose**: 2.0 or higher
+
+For manual setup:
+
+- **Python**: 3.9 or higher
+- **Node.js**: 18.0 or higher
+- **npm**: 9.0 or higher
 
 ### Option 1: Docker Compose (Recommended)
 
@@ -11,14 +96,15 @@ A full-stack web application for visualizing and analyzing CNN (Convolutional Ne
 docker-compose up --build
 ```
 
-Access:
+Access the application:
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+- API Documentation: http://localhost:8000/docs
 
 ### Option 2: Manual Setup
 
 **Backend:**
+
 ```bash
 cd backend
 python -m venv venv
@@ -29,39 +115,27 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Frontend (in separate terminal):**
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-### Smoke Test
+### Verification
 
-Run the backend smoke test to verify everything works:
+Run the backend smoke test to verify the installation:
 
 ```bash
 cd backend
-# First, create sample image if needed
-python scripts/create_sample_image.py
-# Run smoke test (requires backend to be running)
 python scripts/smoke_test.py
 ```
 
 The smoke test verifies:
-- Health endpoint
-- Models endpoint
-- Job creation
-- Job processing and completion
-- Result verification (layers, feature maps, CAM overlays)
-
-## Project Overview
-
-CNN Lens provides an interactive platform to:
-- Upload images and select from available CNN models
-- Visualize network architecture
-- View layer-by-layer feature maps and activations
-- Compare activations across different layers
-- Analyze CNN behavior with heatmaps and visualizations
+- Health endpoint availability
+- Models endpoint functionality
+- Job creation and processing pipeline
+- Result verification (layers, feature maps, Grad-CAM overlays)
 
 ## Project Structure
 
@@ -70,331 +144,190 @@ cnn-lens/
 ├── backend/              # FastAPI Python backend
 │   ├── app/
 │   │   ├── api/         # API routes (v1)
-│   │   ├── core/        # Configuration and models
-│   │   ├── services/    # Business logic (jobs, inference, cache, storage)
-│   │   └── registry/    # Model registry (YAML config)
+│   │   ├── core/        # Configuration and logging
+│   │   ├── inspect/     # Feature map and Grad-CAM generation
+│   │   ├── jobs/        # Job management service
+│   │   ├── models/      # Model loading and registry
+│   │   └── services/    # Business logic (cache, storage)
 │   ├── storage/         # Generated visual assets (gitignored)
+│   ├── tests/           # Backend test suite
+│   ├── model_registry.yaml  # Model configuration registry
 │   └── requirements.txt # Python dependencies
 │
 └── frontend/            # Next.js TypeScript frontend
     ├── app/             # Next.js App Router pages
     ├── components/      # React components
-    ├── lib/             # API client utilities
+    ├── lib/             # API client and utilities
+    ├── public/          # Static assets
     └── types/           # TypeScript type definitions
 ```
 
-## Backend Setup
+## API Documentation
 
-### Prerequisites
-- Python 3.9 or higher
-- pip (Python package manager)
+### Backend Endpoints
 
-### Installation
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   ```
-
-3. Activate the virtual environment:
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-   - On macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
-
-4. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-5. Create a `.env` file from `.env.example` (if available) and configure environment variables:
-   ```bash
-   # Copy and edit .env.example as needed
-   ```
-
-6. Run the FastAPI server:
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-   The API will be available at `http://localhost:8000`
-   - API documentation: `http://localhost:8000/docs`
-   - Alternative docs: `http://localhost:8000/redoc`
-
-### Backend API Endpoints
-
+- `GET /api/v1/health` - Health check endpoint
+- `GET /api/v1/models` - List available models
 - `POST /api/v1/jobs` - Create a new inference job
 - `GET /api/v1/jobs/{job_id}` - Get job status and results
-- `GET /api/v1/health` - Health check endpoint
+- `GET /static/{path}` - Serve generated visual assets
 
-## Frontend Setup
+### Job Processing Workflow
 
-### Prerequisites
-- Node.js 18 or higher
-- npm or yarn
+1. **Job Creation**: Client submits image and model selection via `POST /api/v1/jobs`
+2. **Job Queuing**: Backend creates job record and queues for processing
+3. **Model Loading**: Worker loads PyTorch model from registry (cached in memory)
+4. **Image Preprocessing**: Image is resized, cropped, and normalized per model requirements
+5. **Forward Pass**: Model processes image and extracts layer activations
+6. **Feature Map Generation**: Top activations are visualized and saved as images
+7. **Grad-CAM Generation**: Class activation maps are computed for top-K predictions
+8. **Asset Serialization**: All visualizations are saved to storage directory
+9. **Job Completion**: Job status updates to `succeeded` with result URLs
 
-### Installation
+### Request/Response Examples
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
+**Create Job:**
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+curl -X POST "http://localhost:8000/api/v1/jobs" \
+  -F "image=@image.jpg" \
+  -F "model_id=resnet18" \
+  -F "top_k=3"
+```
 
-3. Create a `.env.local` file with the backend API URL:
-   ```bash
-   NEXT_PUBLIC_API_URL=http://localhost:8000
-   ```
+**Get Job Status:**
 
-4. Run the development server:
-   ```bash
-   npm run dev
-   ```
+```bash
+curl "http://localhost:8000/api/v1/jobs/{job_id}"
+```
 
-   The frontend will be available at `http://localhost:3000`
-
-### Frontend Pages
-
-- `/` - Home page with image upload and model selection
-- `/viewer/[jobId]` - Job viewer page with visualization tools
-
-### Frontend Components
-
-- `ModelSelector` - Dropdown for selecting CNN models
-- `UploadDropzone` - Drag-and-drop image upload area
-- `JobStatusBanner` - Status display for jobs
-- `NetworkGraph` - Visual representation of CNN architecture
-- `LayerPicker` - Left panel for selecting layers
-- `FeatureMapGrid` - Center canvas showing feature maps
-- `HeatmapOverlay` - Overlay component for heatmaps
-- `ComparePanel` - Right panel for layer information and comparison
-
-## Docker Deployment
-
-### Prerequisites
-- Docker 20.10 or higher
-- Docker Compose 2.0 or higher
-
-### Quick Start with Docker Compose
-
-1. Navigate to the project root directory:
-   ```bash
-   cd cnn-lens
-   ```
-
-2. Build and start all services:
-   ```bash
-   docker-compose up --build
-   ```
-
-   This will:
-   - Build the backend and frontend Docker images
-   - Start both services with proper networking
-   - Mount the storage directory for persistence
-
-3. Access the application:
-   - Frontend: `http://localhost:3000`
-   - Backend API: `http://localhost:8000`
-   - API Documentation: `http://localhost:8000/docs`
-
-### Docker Compose Commands
-
-- **Start services in background:**
-  ```bash
-  docker-compose up -d
-  ```
-
-- **Stop services:**
-  ```bash
-  docker-compose down
-  ```
-
-- **View logs:**
-  ```bash
-  # All services
-  docker-compose logs -f
-
-  # Specific service
-  docker-compose logs -f backend
-  docker-compose logs -f frontend
-  ```
-
-- **Rebuild after code changes:**
-  ```bash
-  docker-compose up --build
-  ```
-
-- **Stop and remove volumes (cleans storage):**
-  ```bash
-  docker-compose down -v
-  ```
-
-### Building Individual Docker Images
-
-#### Backend
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-
-2. Build the image:
-   ```bash
-   docker build -t cnn-lens-backend .
-   ```
-
-3. Run the container:
-   ```bash
-   docker run -p 8000:8000 \
-     -v $(pwd)/storage:/app/storage \
-     -e CORS_ORIGINS=http://localhost:3000 \
-     cnn-lens-backend
-   ```
-
-#### Frontend
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Build the image:
-   ```bash
-   docker build -t cnn-lens-frontend \
-     --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 .
-   ```
-
-3. Run the container:
-   ```bash
-   docker run -p 3000:3000 \
-     -e NEXT_PUBLIC_API_URL=http://localhost:8000 \
-     cnn-lens-frontend
-   ```
-
-### Environment Variables
-
-The `docker-compose.yml` file includes default environment variables. To customize:
-
-1. Create a `.env` file in the project root (optional):
-   ```env
-   # Backend
-   BACKEND_ENV=production
-   CORS_ORIGINS=http://localhost:3000
-   CACHE_MAX_ITEMS=100
-
-   # Frontend
-   NEXT_PUBLIC_API_URL=http://localhost:8000
-   ```
-
-2. Or modify environment variables directly in `docker-compose.yml`
-
-### Storage Persistence
-
-The storage directory (`backend/storage`) is mounted as a volume in docker-compose, ensuring that generated visual assets persist across container restarts. The storage directory is created automatically if it doesn't exist.
-
-### Static Assets
-
-- **Backend**: Static files are served from `/static/*` endpoint, mapping to the storage directory
-- **Frontend**: Next.js handles static assets automatically
-
-### Production Considerations
-
-For production deployment:
-
-1. **Use environment-specific configuration:**
-   - Set `BACKEND_ENV=production`
-   - Configure proper `CORS_ORIGINS` for your domain
-   - Use secrets management for sensitive data
-
-2. **Reverse Proxy:**
-   - Consider using nginx or Traefik as a reverse proxy
-   - Configure SSL/TLS certificates
-   - Set proper headers for security
-
-3. **Resource Limits:**
-   - Add resource limits to docker-compose services:
-     ```yaml
-     deploy:
-       resources:
-         limits:
-           cpus: '2'
-           memory: 4G
-     ```
-
-4. **Health Checks:**
-   - Health checks are already configured in the Dockerfiles
-   - Monitor service health using `docker-compose ps`
-
-5. **Logging:**
-   - Consider using Docker logging drivers for production
-   - Configure log rotation and retention policies
-
-## Development Notes
-
-### Backend Architecture
-
-- **FastAPI**: Modern Python web framework for building APIs
-- **PyTorch**: Deep learning framework for model inference
-- **Async Job Pipeline**: In-memory queue system for processing jobs asynchronously
-- **Model Registry**: YAML-based configuration for managing available models
-- **Image Hash Caching**: In-memory cache to avoid reprocessing identical images
-- **Storage Service**: Saves generated visual assets to `backend/storage/{job_id}/`
-
-### Frontend Architecture
-
-- **Next.js 14+**: React framework with App Router
-- **TypeScript**: Type-safe JavaScript
-- **Tailwind CSS**: Utility-first CSS framework for styling
-- **Component-Based**: Modular React components for UI elements
-- **API Client**: fetch() wrapper for backend communication
+## Configuration
 
 ### Environment Variables
 
 **Backend (.env)**
-- `CORS_ORIGINS`: Allowed CORS origins (comma-separated)
-- `STORAGE_ROOT`: Path to storage directory
-- `MODEL_REGISTRY_PATH`: Path to model registry YAML file
-- `CACHE_ENABLED`: Enable/disable image hash caching
+
+- `CORS_ORIGINS`: Allowed CORS origins (comma-separated, default: `http://localhost:3000`)
+- `STORAGE_ROOT`: Path to storage directory (default: `./storage`)
+- `MODEL_REGISTRY_PATH`: Path to model registry YAML file (default: `./model_registry.yaml`)
+- `CACHE_ENABLED`: Enable/disable image hash caching (default: `true`)
+- `CACHE_MAX_ITEMS`: Maximum cache entries (default: `100`)
 
 **Frontend (.env.local)**
-- `NEXT_PUBLIC_API_URL`: Backend API base URL
 
-## Future Implementation
+- `NEXT_PUBLIC_API_URL`: Backend API base URL (default: `http://localhost:8000`)
 
-This project currently contains placeholder/scaffold code. Future implementation tasks include:
+### Model Registry Configuration
 
-1. **Backend**:
-   - Complete async job processing pipeline
-   - Implement PyTorch model loading from registry
-   - Extract feature maps from model layers
-   - Generate visualizations (heatmaps, feature maps)
-   - Save visual assets to storage
+The model registry (`backend/model_registry.yaml`) defines available models with:
 
-2. **Frontend**:
-   - Connect all components to backend APIs
-   - Implement real-time job status polling
-   - Render network architecture diagrams
-   - Display feature maps and heatmaps
-   - Add layer comparison functionality
+- Model identifier and display name
+- Input image dimensions
+- Normalization parameters (mean, std)
+- Layers to hook for feature extraction
+- Layer-to-stage mappings for UI organization
+- Grad-CAM target layer paths
 
-## License
+## Development
 
-[Add your license here]
+### Backend Development
 
-## Contributing
+**Running Tests:**
 
-[Add contributing guidelines here]
+```bash
+cd backend
+pytest
+```
 
+**Code Structure:**
+
+- `app/api/v1/routes.py`: API endpoint definitions
+- `app/jobs/service.py`: Job processing pipeline
+- `app/models/loaders.py`: Model loading and caching
+- `app/inspect/gradcam.py`: Grad-CAM implementation
+- `app/inspect/feature_maps.py`: Feature map extraction
+
+### Frontend Development
+
+**Running Type Check:**
+
+```bash
+cd frontend
+npm run type-check
+```
+
+**Running Linter:**
+
+```bash
+npm run lint
+```
+
+**Code Structure:**
+
+- `app/page.tsx`: Landing page with model selection
+- `app/viewer/[jobId]/page.tsx`: Job viewer with visualization tools
+- `components/NetworkDiagram.tsx`: Interactive network architecture diagram
+- `components/FeatureMapGrid.tsx`: Feature map visualization grid
+- `lib/api.ts`: Type-safe API client
+
+## Deployment
+
+### Docker Compose Deployment
+
+The recommended deployment method uses Docker Compose for orchestration:
+
+```bash
+docker-compose up -d
+```
+
+**Service Configuration:**
+
+- Backend service exposes port 8000
+- Frontend service exposes port 3000
+- Storage directory is mounted as volume for persistence
+- Services communicate via internal Docker network
+
+### Production Considerations
+
+1. **Environment Configuration**: Use environment-specific configuration files
+2. **Reverse Proxy**: Deploy behind nginx or Traefik with SSL/TLS
+3. **Resource Limits**: Configure CPU and memory limits in docker-compose
+4. **Logging**: Implement structured logging with log aggregation
+5. **Monitoring**: Add health checks and metrics collection
+6. **Security**: Configure CORS origins, rate limiting, and input validation
+7. **Storage**: Use persistent volumes or cloud storage for generated assets
+
+### Health Checks
+
+Health check endpoints are configured in Dockerfiles:
+
+- Backend: `GET /api/v1/health`
+- Monitor service health: `docker-compose ps`
+
+## Testing
+
+### Backend Test Suite
+
+The backend includes comprehensive tests:
+
+- Unit tests for model loading and preprocessing
+- Integration tests for API endpoints
+- Feature map extraction tests
+- Grad-CAM generation tests
+- Model registry validation tests
+
+Run tests:
+
+```bash
+cd backend
+pytest
+```
+
+### Smoke Tests
+
+Smoke tests verify end-to-end functionality:
+
+```bash
+cd backend
+python scripts/smoke_test.py
+```

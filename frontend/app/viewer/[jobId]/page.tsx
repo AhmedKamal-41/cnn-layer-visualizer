@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import JobStatusBanner from '@/components/JobStatusBanner'
 import NetworkGraph from '@/components/NetworkGraph'
 import NetworkDiagram from '@/components/NetworkDiagram'
 import LayerPicker from '@/components/LayerPicker'
@@ -268,9 +267,6 @@ function ViewerPageContent() {
           </p>
         </div>
       )}
-
-      {/* Status Banner */}
-      <JobStatusBanner job={job} />
 
       {/* Controls Bar: Auto-advance */}
       {job.status === 'succeeded' && availableStages.length > 0 && (

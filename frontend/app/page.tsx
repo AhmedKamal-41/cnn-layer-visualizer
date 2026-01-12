@@ -104,7 +104,7 @@ export default function Home() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative py-12 md:py-16 overflow-hidden">
+        <section className="relative py-16 md:py-20 lg:py-24 overflow-hidden">
           {/* Layered Background: Base gradient + Radial blobs + Grid pattern */}
           <div 
             className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50"
@@ -117,130 +117,167 @@ export default function Home() {
           </div>
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              {/* Left Column */}
-              <div>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-6 leading-tight">
-                  Visualize how CNNs transform images into predictions
-                </h1>
-                <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
-                  Explore layer-by-layer activations, feature maps, and Grad-CAM visualizations to understand what CNNs learn.
-                </p>
+            <div className="max-w-4xl mx-auto text-center">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-800 mb-8 leading-tight">
+                Visualize how CNNs transform images into predictions
+              </h1>
+              <p className="text-xl md:text-2xl text-gray-600 mb-10 leading-relaxed">
+                Explore layer-by-layer activations, feature maps, and Grad-CAM visualizations to understand what CNNs learn.
+              </p>
 
-                {/* CTAs */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                  <button
-                    onClick={scrollToUpload}
-                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-violet-700 hover:shadow-xl hover:shadow-violet-400/50 active:scale-[0.98] transition-all duration-200"
-                  >
-                    Try Demo
-                  </button>
-                  <button
-                    onClick={scrollToHowItWorks}
-                    className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:shadow-md transition-all duration-200 border border-gray-300"
-                  >
-                    Learn How It Works
-                  </button>
-                </div>
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-center">
+                <button
+                  onClick={scrollToUpload}
+                  className="px-8 py-4 text-base md:text-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-violet-700 hover:shadow-xl hover:shadow-violet-400/50 active:scale-[0.98] transition-all duration-200"
+                >
+                  Try Demo
+                </button>
+                <button
+                  onClick={scrollToHowItWorks}
+                  className="px-8 py-4 text-base md:text-lg bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:shadow-md transition-all duration-200 border border-gray-300"
+                >
+                  Learn How It Works
+                </button>
+              </div>
 
-                {/* Trusted by section */}
-                <div className="mb-8">
-                  <p className="text-xs text-gray-500 mb-3 uppercase tracking-wide">Trusted by</p>
-                  <div className="flex flex-wrap items-center gap-4">
-                    {[
-                      { icon: '🔬', label: 'Research Labs' },
-                      { icon: '🎓', label: 'Students' },
-                      { icon: '⚙️', label: 'Engineers' },
-                      { icon: '📊', label: 'Data Teams' },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 text-sm text-gray-600 opacity-70">
-                        <span>{item.icon}</span>
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quick bullets */}
-                <div className="space-y-2">
-                  <div className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm font-medium">Layer activations</span>
-                  </div>
-                  <div className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm font-medium">Grad-CAM heatmaps</span>
-                  </div>
-                  <div className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm font-medium">Prediction breakdown</span>
-                  </div>
+              {/* Trusted by section */}
+              <div className="mb-8">
+                <p className="text-xs text-gray-500 mb-3 uppercase tracking-wide">Trusted by</p>
+                <div className="flex flex-wrap items-center gap-4 justify-center">
+                  {[
+                    { icon: '🔬', label: 'Research Labs' },
+                    { icon: '🎓', label: 'Students' },
+                    { icon: '⚙️', label: 'Engineers' },
+                    { icon: '📊', label: 'Data Teams' },
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 text-sm text-gray-600 opacity-70">
+                      <span>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Right Column - Real CNN Demo */}
-              <div className="hidden md:block">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-10 lg:p-12 border border-gray-200/50 max-w-4xl mx-auto">
-                  {/* Caption */}
-                  <p className="text-xs text-gray-500 mb-4 uppercase tracking-wide text-center">Example CNN Explanation</p>
-                  
-                  {/* Two Images Side-by-Side */}
-                  <div className="grid grid-cols-2 gap-5 mb-6">
-                    {/* Original Image */}
-                    <div>
-                      <div className="text-xs font-medium text-gray-600 mb-3">Original</div>
-                      <div className="aspect-[4/3] bg-slate-50 rounded-lg overflow-hidden border border-gray-200">
-                        <img
-                          src="/imgs/cat.jpg"
-                          alt="Original image"
-                          className="w-full h-full object-contain"
-                          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                            if (target.parentElement) {
-                              target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Demo Image</div>'
-                            }
-                          }}
-                        />
+              {/* Quick bullets */}
+              <div className="space-y-2 flex flex-col items-center">
+                <div className="flex items-center text-gray-700">
+                  <svg className="w-6 h-6 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-base font-medium">Layer activations</span>
+                </div>
+                <div className="flex items-center text-gray-700">
+                  <svg className="w-6 h-6 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-base font-medium">Grad-CAM heatmaps</span>
+                </div>
+                <div className="flex items-center text-gray-700">
+                  <svg className="w-6 h-6 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-base font-medium">Prediction breakdown</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Example CNN Explanation Section */}
+        <section className="py-16 md:py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Section Header */}
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                Example CNN Explanation
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                See how a CNN transforms an image: from the original photo, through Grad-CAM heatmaps, to the final overlay visualization.
+              </p>
+            </div>
+
+            {/* Demo Card */}
+            <div className="max-w-6xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 lg:p-16 border border-gray-200/50">
+                {/* Three-Column Visual Pipeline */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12">
+                  {/* Step 1: Original Image */}
+                  <div>
+                    <div className="text-xs font-semibold text-gray-600 mb-3 text-center md:text-left">Step 1: Original</div>
+                    <div className="relative rounded-xl border border-gray-200 shadow-md overflow-hidden aspect-[4/3] bg-slate-50">
+                      <div className="absolute top-2 left-2 z-10 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded-full">
+                        <span className="text-white text-xs font-semibold">Original</span>
                       </div>
-                    </div>
-                    
-                    {/* Grad-CAM Heatmap */}
-                    <div>
-                      <div className="text-xs font-medium text-gray-600 mb-3">Grad-CAM</div>
-                      <div className="aspect-[4/3] bg-slate-50 rounded-lg overflow-hidden border border-gray-200">
-                        <img
-                          src="/imgs/cat_gradcam.jpg"
-                          alt="Grad-CAM heatmap"
-                          className="w-full h-full object-contain"
-                          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                            if (target.parentElement) {
-                              target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Grad-CAM</div>'
-                            }
-                          }}
-                        />
-                      </div>
+                      <img
+                        src="/imgs/cat.png"
+                        alt="Original image"
+                        className="w-full h-full object-contain"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          if (target.parentElement) {
+                            target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Demo Image</div>'
+                          }
+                        }}
+                      />
                     </div>
                   </div>
-
-                  {/* Prediction with Confidence */}
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-lg border border-indigo-200/50">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Prediction</div>
-                      <div className="text-sm font-semibold text-gray-900 truncate">Golden Retriever</div>
-                    </div>
-                    <div className="ml-4 flex-shrink-0">
-                      <div className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-base font-bold rounded-lg shadow-md">
-                        94.2%
+                  
+                  {/* Step 2: Overlay */}
+                  <div>
+                    <div className="text-xs font-semibold text-gray-600 mb-3 text-center md:text-left">Step 2: Overlay</div>
+                    <div className="relative rounded-xl border border-gray-200 shadow-md overflow-hidden aspect-[4/3] bg-slate-50">
+                      <div className="absolute top-2 left-2 z-10 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded-full">
+                        <span className="text-white text-xs font-semibold">Overlay</span>
                       </div>
+                      <img
+                        src="/imgs/overlay.png"
+                        alt="Grad-CAM overlay"
+                        className="w-full h-full object-contain"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          if (target.parentElement) {
+                            target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Overlay</div>'
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Step 3: Grad-CAM Heatmap */}
+                  <div>
+                    <div className="text-xs font-semibold text-gray-600 mb-3 text-center md:text-left">Step 3: Grad-CAM</div>
+                    <div className="relative rounded-xl border border-gray-200 shadow-md overflow-hidden aspect-[4/3] bg-slate-50">
+                      <div className="absolute top-2 left-2 z-10 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded-full">
+                        <span className="text-white text-xs font-semibold">Grad-CAM</span>
+                      </div>
+                      <img
+                        src="/imgs/cat_gradcam.png"
+                        alt="Grad-CAM heatmap"
+                        className="w-full h-full object-contain"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          if (target.parentElement) {
+                            target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Grad-CAM</div>'
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Prediction with Confidence */}
+                <div className="flex items-center justify-between p-6 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-lg border border-indigo-200/50">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Prediction</div>
+                    <div className="text-base md:text-lg font-semibold text-gray-900 truncate">Golden Retriever</div>
+                  </div>
+                  <div className="ml-4 flex-shrink-0">
+                    <div className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-lg md:text-xl font-bold rounded-lg shadow-md">
+                      94.2%
                     </div>
                   </div>
                 </div>

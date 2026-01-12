@@ -15,7 +15,7 @@ import GradCAMControls from '@/components/GradCAMControls'
 import LayerExplainer from '@/components/LayerExplainer'
 import RightDetailsPanel from '@/components/RightDetailsPanel'
 import ErrorBoundary from '@/components/ErrorBoundary'
-import { getJobStatus, JobResponse, createJob, getModels, Model } from '@/lib/api'
+import { getJobStatus, JobResponse, createJob } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 
 // Layer type interface
@@ -33,30 +33,6 @@ function ViewerPageContent() {
   const [error, setError] = useState<string | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Compare mode state
-  const [compareMode, setCompareMode] = useState(false)
-  const [models, setModels] = useState<Model[]>([])
-  const [secondModelId, setSecondModelId] = useState<string | null>(null)
-  const [secondJob, setSecondJob] = useState<JobResponse | null>(null)
-  const [secondJobError, setSecondJobError] = useState<string | null>(null)
-  const secondPollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Fetch models when compare mode is enabled
-  useEffect(() => {
-    if (!compareMode) return
-
-    const fetchModelsList = async () => {
-      try {
-        const modelsList = await getModels()
-        setModels(modelsList)
-      } catch (err) {
-        console.error('Failed to fetch models:', err)
-      }
-    }
-
-    fetchModelsList()
-  }, [compareMode])
-
   // Convert image URL to File for job creation
   const urlToFile = async (url: string): Promise<File> => {
     const response = await fetch(url)
@@ -64,69 +40,6 @@ function ViewerPageContent() {
     const filename = url.split('/').pop() || 'image.png'
     return new File([blob], filename, { type: blob.type || 'image/png' })
   }
-
-  // Create second job when second model is selected
-  useEffect(() => {
-    if (!compareMode || !secondModelId || !job || job.status !== 'succeeded') return
-
-    const jobData = job as any
-    const inputImageUrl = jobData.input?.image_url
-    if (!inputImageUrl) return
-
-    const createSecondJob = async () => {
-      try {
-        setSecondJobError(null)
-        const imageFile = await urlToFile(inputImageUrl)
-        const newJob = await createJob(imageFile, secondModelId)
-        setSecondJob(newJob)
-      } catch (err) {
-        console.error('Failed to create second job:', err)
-        setSecondJobError(err instanceof Error ? err.message : 'Failed to create second job')
-      }
-    }
-
-    createSecondJob()
-  }, [compareMode, secondModelId, job])
-
-  // Poll second job status
-  useEffect(() => {
-    if (!secondJob || secondJob.status === 'succeeded' || secondJob.status === 'failed') {
-      if (secondPollingIntervalRef.current) {
-        clearInterval(secondPollingIntervalRef.current)
-        secondPollingIntervalRef.current = null
-      }
-      return
-    }
-
-    const fetchSecondJobStatus = async () => {
-      try {
-        const jobData = await getJobStatus(secondJob.job_id)
-        setSecondJob(jobData)
-
-        if (jobData.status === 'succeeded' || jobData.status === 'failed') {
-          if (secondPollingIntervalRef.current) {
-            clearInterval(secondPollingIntervalRef.current)
-            secondPollingIntervalRef.current = null
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch second job status:', err)
-        if (secondPollingIntervalRef.current) {
-          clearInterval(secondPollingIntervalRef.current)
-          secondPollingIntervalRef.current = null
-        }
-      }
-    }
-
-    secondPollingIntervalRef.current = setInterval(fetchSecondJobStatus, 700)
-
-    return () => {
-      if (secondPollingIntervalRef.current) {
-        clearInterval(secondPollingIntervalRef.current)
-        secondPollingIntervalRef.current = null
-      }
-    }
-  }, [secondJob])
 
   useEffect(() => {
     const fetchJobStatus = async () => {
@@ -165,10 +78,6 @@ function ViewerPageContent() {
         clearInterval(pollingIntervalRef.current)
         pollingIntervalRef.current = null
       }
-      if (secondPollingIntervalRef.current) {
-        clearInterval(secondPollingIntervalRef.current)
-        secondPollingIntervalRef.current = null
-      }
     }
   }, [jobId])
 
@@ -202,14 +111,6 @@ function ViewerPageContent() {
     return (jobData.layers || []).find((l: Layer) => l.stage === selectedLayer) || null
   }, [selectedLayer, job])
 
-  // Get layers for compare mode (must be before any early returns)
-  const compareModeLayers = useMemo(() => {
-    if (compareMode && secondJob?.status === 'succeeded') {
-      const secondJobData = secondJob as any
-      return (secondJobData.layers || []).filter((l: Layer) => l.stage !== null && l.stage !== undefined)
-    }
-    return layers
-  }, [compareMode, secondJob, layers])
 
   // Auto-advance state
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
@@ -346,30 +247,13 @@ function ViewerPageContent() {
     return prediction || null
   }
 
-  // Helper function to find layer by stage in a job
-  const findLayerByStage = (jobData: JobResponse | null, stage: string | null) => {
-    if (!jobData || jobData.status !== 'succeeded' || !stage) return null
-    const data = jobData as any
-    const layers = data.layers || []
-    return layers.find((l: Layer) => l.stage === stage) || null
-  }
-
-  // Calculate diff summary
-  const job1Pred = getTopPrediction(job)
-  const job2Pred = getTopPrediction(secondJob)
-  const confidenceDelta =
-    job1Pred && job2Pred
-      ? Math.abs(job1Pred.prob - job2Pred.prob) * 100
-      : null
-
   // Get job data (computed after all hooks, safe to use in render)
   const jobData = job as any
-  const secondJobData = secondJob as any
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Top: NetworkDiagram (only show if not in compare mode and job succeeded) */}
-      {!compareMode && job?.status === 'succeeded' && layers.length > 0 && (
+      {/* Top: NetworkDiagram */}
+      {job?.status === 'succeeded' && layers.length > 0 && (
         <div className="border-b bg-white px-6 py-4">
           <NetworkDiagram
             layers={layers}
@@ -388,312 +272,123 @@ function ViewerPageContent() {
       {/* Status Banner */}
       <JobStatusBanner job={job} />
 
-      {/* Controls Bar: Auto-advance and Compare Mode */}
+      {/* Controls Bar: Auto-advance */}
       {job.status === 'succeeded' && availableStages.length > 0 && (
         <div className="border-b bg-white px-4 py-2 flex items-center justify-between">
           {/* Auto-advance control */}
-          {!compareMode && (
-            <button
-              onClick={toggleAutoAdvance}
-              className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
-                ${
-                  isAutoAdvancing
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }
-              `}
-              title={isAutoAdvancing ? 'Pause auto-advance (Space)' : 'Start auto-advance (Space)'}
-            >
-              {isAutoAdvancing ? (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>Pause</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>Play</span>
-                </>
-              )}
-            </button>
-          )}
-          {!compareMode && isAutoAdvancing && (
+          <button
+            onClick={toggleAutoAdvance}
+            className={`
+              flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+              ${
+                isAutoAdvancing
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }
+            `}
+            title={isAutoAdvancing ? 'Pause auto-advance (Space)' : 'Start auto-advance (Space)'}
+          >
+            {isAutoAdvancing ? (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>Play</span>
+              </>
+            )}
+          </button>
+          {isAutoAdvancing && (
             <span className="text-xs text-gray-500">
               Auto-advancing... Use ← → to navigate, Space to pause
             </span>
           )}
           <div className="flex-1" />
-          {/* Compare mode toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={compareMode}
-              onChange={(e) => {
-                setCompareMode(e.target.checked)
-                setIsAutoAdvancing(false) // Stop auto-advance when enabling compare mode
-                if (!e.target.checked) {
-                  setSecondModelId(null)
-                  setSecondJob(null)
-                  setSecondJobError(null)
-                }
-              }}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm font-medium text-gray-700">Compare models</span>
-          </label>
         </div>
       )}
-
-      {/* Compare Mode Toggle and Controls (fallback when no stages) */}
-      {job.status === 'succeeded' && availableStages.length === 0 && (
-        <div className="border-b bg-white p-4">
-          <div className="flex items-center justify-end">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={compareMode}
-                onChange={(e) => {
-                  setCompareMode(e.target.checked)
-                  if (!e.target.checked) {
-                    setSecondModelId(null)
-                    setSecondJob(null)
-                    setSecondJobError(null)
-                  }
-                }}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Compare models</span>
-            </label>
-
-            {compareMode && (
-              <div className="flex items-center gap-4 flex-1 max-w-md ml-4">
-                <select
-                  value={secondModelId || ''}
-                  onChange={(e) => setSecondModelId(e.target.value || null)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  disabled={!models.length}
-                >
-                  <option value="">Select second model...</option>
-                  {models
-                    .filter((m) => m.id !== job.model_id)
-                    .map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.display_name}
-                      </option>
-                    ))}
-                </select>
-                {secondJob && <JobStatusBanner job={secondJob} />}
-                {secondJobError && (
-                  <div className="text-sm text-red-600">{secondJobError}</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Diff Summary */}
-      {compareMode &&
-        job.status === 'succeeded' &&
-        secondJob?.status === 'succeeded' &&
-        job1Pred &&
-        job2Pred && (
-          <div className="border-b bg-blue-50 p-4">
-            <div className="flex items-center justify-center gap-8 text-sm">
-              <div>
-                <span className="font-semibold">Model 1:</span>{' '}
-                {job1Pred.class_name} ({(job1Pred.prob * 100).toFixed(1)}%)
-              </div>
-              <div>
-                <span className="font-semibold">Model 2:</span>{' '}
-                {job2Pred.class_name} ({(job2Pred.prob * 100).toFixed(1)}%)
-              </div>
-              {confidenceDelta !== null && (
-                <div>
-                  <span className="font-semibold">Confidence Delta:</span>{' '}
-                  {confidenceDelta.toFixed(1)}%
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
       {/* Main Layout */}
       {job.status === 'succeeded' ? (
-        compareMode && secondJob?.status === 'succeeded' ? (
-          // Compare Mode: Two Columns
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left: LayerPicker */}
-            <aside className="w-1/4 border-r bg-white overflow-y-auto">
-              <LayerPicker
-                layers={compareModeLayers}
-                selectedStage={selectedLayer}
-                onStageSelect={setSelectedLayer}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: LayerPicker */}
+          <aside className="w-1/4 border-r bg-white overflow-y-auto">
+            <LayerPicker
+              layers={layers}
+              selectedStage={selectedLayer}
+              onStageSelect={setSelectedLayer}
+            />
+          </aside>
+
+          {/* Center: Layer Learning View */}
+          <main className="flex-1 bg-gray-50 overflow-y-auto">
+            <div className="p-6">
+              {/* Header: LayerExplainer */}
+              <LayerExplainer
+                layerName={selectedLayerData?.name || null}
+                layerStage={selectedLayer || null}
               />
-            </aside>
 
-            {/* Two Columns */}
-            <div className="flex flex-1">
-              {/* Column 1: First Job */}
-              <div className="flex-1 border-r bg-gray-50 flex flex-col overflow-hidden">
-                <div className="border-b bg-white p-2">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    {jobData.model?.display_name || job.model_id}
-                  </h3>
+              {/* Section A: Feature Maps */}
+              {selectedLayer && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Feature Maps</h2>
+                  <FeatureMapGrid job={job} selectedStage={selectedLayer} />
                 </div>
-                <div className="flex-1 overflow-y-auto">
-                  <div className="border-b bg-white">
-                    <NetworkGraph
-                      job={job}
-                      selectedStage={selectedLayer}
-                      onStageSelect={setSelectedLayer}
-                      compact={true}
-                    />
-                  </div>
-                  <div className="p-4 space-y-4">
-                    <FeatureMapGrid job={job} selectedStage={selectedLayer} />
-                    <HeatmapOverlay job={job} selectedStage={selectedLayer} />
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Column 2: Second Job */}
-              <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden">
-                <div className="border-b bg-white p-2">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    {secondJobData.model?.display_name || secondJob.model_id}
-                  </h3>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  <div className="border-b bg-white">
-                    <NetworkGraph
-                      job={secondJob}
-                      selectedStage={selectedLayer}
-                      onStageSelect={setSelectedLayer}
-                      compact={true}
-                    />
-                  </div>
-                  <div className="p-4 space-y-4">
-                    <FeatureMapGrid job={secondJob} selectedStage={selectedLayer} />
-                    <HeatmapOverlay job={secondJob} selectedStage={selectedLayer} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : compareMode ? (
-          // Compare Mode: Waiting for second job
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              {secondJob ? (
-                <>
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-                  <p className="text-gray-600">
-                    {secondJob.message || 'Processing second job...'}
-                  </p>
-                </>
-              ) : secondModelId ? (
-                <p className="text-gray-600">Creating second job...</p>
-              ) : (
-                <p className="text-gray-600">Select a second model to compare</p>
+              {/* Section B: Grad-CAM Timeline (only if data exists) */}
+              {job.status === 'succeeded' && (
+                <GradCAMTimeline job={job} selectedStage={selectedLayer} />
               )}
             </div>
-          </div>
-        ) : (
-          // Normal Mode
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left: LayerPicker */}
-            <aside className="w-1/4 border-r bg-white overflow-y-auto">
-              <LayerPicker
-                layers={layers}
-                selectedStage={selectedLayer}
-                onStageSelect={setSelectedLayer}
-              />
-            </aside>
+          </main>
 
-            {/* Center: Layer Learning View */}
-            <main className="flex-1 bg-gray-50 overflow-y-auto">
-              <div className="p-6">
-                {/* Header: LayerExplainer */}
-                <LayerExplainer
-                  layerName={selectedLayerData?.name || null}
-                  layerStage={selectedLayer || null}
-                />
-
-                {/* Section A: Feature Maps */}
-                {selectedLayer && (
-                  <div className="mb-8">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Feature Maps</h2>
-                    <FeatureMapGrid job={job} selectedStage={selectedLayer} />
-                  </div>
-                )}
-
-                {/* Section B: Grad-CAM Timeline (only if data exists) */}
-                {job.status === 'succeeded' && (
-                  <GradCAMTimeline job={job} selectedStage={selectedLayer} />
-                )}
-              </div>
-            </main>
-
-            {/* Right: RightDetailsPanel (sticky) */}
-            <RightDetailsPanel
-              job={job}
-              selectedStage={selectedLayer}
-              compareMode={compareMode}
-              onCompareModeChange={(enabled) => {
-                setCompareMode(enabled)
-                setIsAutoAdvancing(false)
-                if (!enabled) {
-                  setSecondModelId(null)
-                  setSecondJob(null)
-                  setSecondJobError(null)
-                }
-              }}
-              topK={topK}
-              camLayers={camLayers}
-              availableLayers={jobData.gradcam?.layers || ['conv1', 'layer1', 'layer2', 'layer3', 'layer4']}
-              onTopKChange={setTopK}
-              onLayersChange={setCamLayers}
-              onApplySettings={async () => {
-                try {
-                  const inputImageUrl = jobData.input?.image_url
-                  if (!inputImageUrl) return
-                  
-                  const imageFile = await urlToFile(inputImageUrl)
-                  const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
-                  router.push(`/viewer/${newJob.job_id}`)
-                } catch (err) {
-                  console.error('Failed to re-run job:', err)
-                  setError(err instanceof Error ? err.message : 'Failed to re-run job')
-                }
-              }}
-              models={models}
-              secondModelId={secondModelId}
-              onSecondModelChange={setSecondModelId}
-            />
-          </div>
-        )
+          {/* Right: RightDetailsPanel (sticky) */}
+          <RightDetailsPanel
+            job={job}
+            selectedStage={selectedLayer}
+            topK={topK}
+            camLayers={camLayers}
+            availableLayers={jobData.gradcam?.layers || ['conv1', 'layer1', 'layer2', 'layer3', 'layer4']}
+            onTopKChange={setTopK}
+            onLayersChange={setCamLayers}
+            onApplySettings={async () => {
+              try {
+                const inputImageUrl = jobData.input?.image_url
+                if (!inputImageUrl) return
+                
+                const imageFile = await urlToFile(inputImageUrl)
+                const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
+                router.push(`/viewer/${newJob.job_id}`)
+              } catch (err) {
+                console.error('Failed to re-run job:', err)
+                setError(err instanceof Error ? err.message : 'Failed to re-run job')
+              }
+            }}
+          />
+        </div>
       ) : (
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="text-center">

@@ -8,33 +8,23 @@ import { JobResponse } from '@/lib/api'
 interface RightDetailsPanelProps {
   job: JobResponse | null
   selectedStage: string | null
-  compareMode: boolean
-  onCompareModeChange: (enabled: boolean) => void
   topK: number
   camLayers: string[]
   availableLayers: string[]
   onTopKChange: (k: number) => void
   onLayersChange: (layers: string[]) => void
   onApplySettings: () => void
-  models?: Array<{ id: string; display_name: string }>
-  secondModelId?: string | null
-  onSecondModelChange?: (modelId: string | null) => void
 }
 
 export default function RightDetailsPanel({
   job,
   selectedStage,
-  compareMode,
-  onCompareModeChange,
   topK,
   camLayers,
   availableLayers,
   onTopKChange,
   onLayersChange,
   onApplySettings,
-  models = [],
-  secondModelId,
-  onSecondModelChange,
 }: RightDetailsPanelProps) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
   const labelMap = useLabelMap()
@@ -269,37 +259,6 @@ export default function RightDetailsPanel({
 
             {isAdvancedOpen && (
               <div className="mt-4 space-y-4">
-                {/* Compare Models Toggle */}
-                <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={compareMode}
-                      onChange={(e) => onCompareModeChange(e.target.checked)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Compare models</span>
-                  </label>
-                  {compareMode && models.length > 0 && onSecondModelChange && (
-                    <div className="mt-2">
-                      <select
-                        value={secondModelId || ''}
-                        onChange={(e) => onSecondModelChange(e.target.value || null)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      >
-                        <option value="">Select second model...</option>
-                        {models
-                          .filter((m) => m.id !== job.model_id)
-                          .map((model) => (
-                            <option key={model.id} value={model.id}>
-                              {model.display_name}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
                 {/* Top-K Selector */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

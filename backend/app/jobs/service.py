@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.jobs.models import JobRecord, JobStatus, JobResult
 from app.models.loaders import load_model, preprocess_image
 from app.models.registry import get_model_config
+from app.models.layer_mapping import get_default_cam_layers, get_cam_target_path
 from app.inspect.hooks import capture_activations
 from app.inspect.feature_maps import save_feature_maps
 from app.inspect.gradcam import generate_gradcam_topk, generate_gradcam_multilayer
@@ -53,9 +54,11 @@ class JobService:
         Returns:
             Job ID (UUID string)
         """
-        # Default cam_layers if None
+        # Default cam_layers if None - use model-specific defaults from registry
         if cam_layers is None:
-            cam_layers = ["conv1", "layer1", "layer2", "layer3", "layer4"]
+            cam_layers = get_default_cam_layers(model_id)
+            if not cam_layers:
+                raise ValueError(f"No default CAM layers found for model '{model_id}'")
         
         # Check cache first (if enabled)
         if settings.CACHE_ENABLED:
@@ -160,12 +163,19 @@ class JobService:
                 )
                 return
             
+            # Extract model_id for use in defaults
+            model_id = job.model_id
+            
             # Get params (defaults if not found)
             if job_params:
                 top_k, cam_layers = job_params
             else:
                 top_k = 3
-                cam_layers = ["conv1", "layer1", "layer2", "layer3", "layer4"]
+                # Use model-specific defaults from registry
+                cam_layers = get_default_cam_layers(model_id)
+                if not cam_layers:
+                    logger.warning(f"No default CAM layers found for model '{model_id}', using empty list")
+                    cam_layers = []
             
             # Update status to RUNNING
             await self._update_job_progress(
@@ -176,7 +186,6 @@ class JobService:
             )
             logger.info(f"Started processing job {job_id}")
             
-            model_id = job.model_id
             storage_dir = settings.STORAGE_DIR
             
             # Store image_bytes for cache key generation later
@@ -281,11 +290,15 @@ class JobService:
                 # Get stage for this layer
                 stage = layer_stages.get(layer_name)
                 
+                # Get CAM target path (PyTorch module path for Grad-CAM)
+                cam_target_path = get_cam_target_path(layer_name, model_id)
+                
                 layers_data.append({
                     "name": layer_name,
                     "stage": stage,
                     "shape": {"c": int(c), "h": int(h), "w": int(w)},
                     "top_channels": top_channels,
+                    "cam_target_path": cam_target_path,
                 })
             
             logger.debug(f"Job {job_id}: Feature maps extracted")

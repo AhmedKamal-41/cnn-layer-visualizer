@@ -70,6 +70,7 @@ class LayerInfo(BaseModel):
     stage: Optional[str] = Field(default=None, description="Canonical stage identifier (e.g., stage1, stage2)")
     shape: LayerShape
     top_channels: List[ChannelInfo]
+    cam_target_path: Optional[str] = Field(default=None, description="PyTorch module path for Grad-CAM computation")
 
 
 class CAMInfo(BaseModel):

@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from typing import Optional, List, Dict, Any
 
 from app.models.registry import list_models, get_model_config
+from app.models.layer_mapping import get_default_cam_layers
+from app.models.loaders import load_model
 from app.jobs.service import job_service
 from app.jobs.models import (
     JobRecord,
@@ -81,7 +83,10 @@ async def create_job(
     
     # Parse and validate cam_layers
     if cam_layers is None:
-        cam_layers_list = ["conv1", "layer1", "layer2", "layer3", "layer4"]
+        # Use model-specific defaults from registry
+        cam_layers_list = get_default_cam_layers(model_id)
+        if not cam_layers_list:
+            raise HTTPException(status_code=400, detail=f"No default CAM layers found for model '{model_id}'")
     else:
         cam_layers_list = [layer.strip() for layer in cam_layers.split(",") if layer.strip()]
         if not cam_layers_list:
@@ -96,6 +101,44 @@ async def create_job(
         raise HTTPException(status_code=500, detail="Failed to create job")
     
     return job
+
+
+@router.get("/debug/model_modules/{model_id}")
+async def debug_model_modules(model_id: str):
+    """
+    Debug endpoint to inspect model module structure.
+    
+    Returns a list of all named modules in the model, useful for verifying
+    which layer paths exist (e.g., for Grad-CAM configuration).
+    
+    Args:
+        model_id: Model identifier from registry
+        
+    Returns:
+        JSON with model_id and list of module names
+    """
+    # Validate model_id exists in registry
+    model_config = get_model_config(model_id)
+    if model_config is None:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found in registry")
+    
+    try:
+        # Load the model
+        model = load_model(model_id)
+        
+        # Get all named modules
+        module_names = []
+        for name, _ in model.named_modules():
+            if name:  # Skip empty name (root module)
+                module_names.append(name)
+        
+        return {
+            "model_id": model_id,
+            "module_names": module_names,
+            "count": len(module_names)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading model: {str(e)}")
 
 
 @router.get("/jobs/{job_id}")
@@ -158,6 +201,7 @@ async def get_job_status(job_id: str):
                     w=layer_data["shape"]["w"],
                 ),
                 top_channels=top_channels,
+                cam_target_path=layer_data.get("cam_target_path"),
             )
         )
     

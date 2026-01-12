@@ -184,48 +184,41 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right Column - Product Preview Mock */}
+              {/* Right Column - Real CNN Demo */}
               <div className="hidden md:block">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-6 border border-gray-200/50">
-                  {/* Layer pipeline chips */}
-                  <div className="flex gap-2 flex-wrap mb-4">
-                    {['Conv', 'Pool', 'Block', 'Head'].map((layer, idx) => (
-                      <div
-                        key={layer}
-                        className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-violet-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200/50"
-                      >
-                        {layer}
+                <div className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-200/50">
+                  {/* Caption */}
+                  <p className="text-xs text-gray-500 mb-4 uppercase tracking-wide text-center">Example CNN Explanation</p>
+                  
+                  {/* Single Image */}
+                  <div className="mb-4">
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src="/workspaces/cnn-layer-visualizer/frontend/imgs/cat.jpg"
+                        alt="CNN analysis example"
+                        className="w-full h-full object-cover"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          // Fallback placeholder if image doesn't exist
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          if (target.parentElement) {
+                            target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">Demo Image</div>'
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Prediction with Confidence */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-lg border border-indigo-200/50">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Prediction</div>
+                      <div className="text-sm font-semibold text-gray-900 truncate">Golden Retriever</div>
+                    </div>
+                    <div className="ml-4 flex-shrink-0">
+                      <div className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-base font-bold rounded-lg shadow-md">
+                        94.2%
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Fake activation heatmap */}
-                  <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg p-4 border border-gray-200 mb-4">
-                    <div className="grid grid-cols-6 gap-1.5">
-                      {Array.from({ length: 24 }).map((_, i) => {
-                        const intensity = Math.sin(i * 0.5) * 0.5 + 0.5
-                        const hue = intensity * 180 + 240 // indigo-violet range
-                        return (
-                          <div
-                            key={i}
-                            className="aspect-square rounded"
-                            style={{
-                              background: `linear-gradient(135deg, hsl(${hue}, 70%, ${50 + intensity * 30}%), hsl(${hue + 20}, 70%, ${40 + intensity * 40}%))`,
-                            }}
-                          />
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Final Prediction pill */}
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-lg border border-indigo-200/50 shadow-sm">
-                    <div>
-                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Prediction</div>
-                      <div className="text-sm font-semibold text-gray-900">Golden Retriever</div>
-                    </div>
-                    <div className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-lg font-bold rounded-lg shadow-md">
-                      94.2%
                     </div>
                   </div>
                 </div>

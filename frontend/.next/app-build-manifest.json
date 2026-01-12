@@ -11,10 +11,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/viewer/[jobId]/page": [
+    "/not-found": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/viewer/[jobId]/page.js"
+      "static/chunks/app/not-found.js"
     ]
   }
 }

@@ -186,16 +186,16 @@ export default function Home() {
 
               {/* Right Column - Real CNN Demo */}
               <div className="hidden md:block">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-200/50">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-10 lg:p-12 border border-gray-200/50 max-w-4xl mx-auto">
                   {/* Caption */}
                   <p className="text-xs text-gray-500 mb-4 uppercase tracking-wide text-center">Example CNN Explanation</p>
                   
                   {/* Two Images Side-by-Side */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-2 gap-5 mb-6">
                     {/* Original Image */}
                     <div>
-                      <div className="text-xs font-medium text-gray-600 mb-2">Original</div>
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
+                      <div className="text-xs font-medium text-gray-600 mb-3">Original</div>
+                      <div className="aspect-[4/3] bg-slate-50 rounded-lg overflow-hidden border border-gray-200">
                         <img
                           src="/imgs/cat.jpg"
                           alt="Original image"
@@ -213,10 +213,10 @@ export default function Home() {
                     
                     {/* Grad-CAM Heatmap */}
                     <div>
-                      <div className="text-xs font-medium text-gray-600 mb-2">Grad-CAM</div>
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
+                      <div className="text-xs font-medium text-gray-600 mb-3">Grad-CAM</div>
+                      <div className="aspect-[4/3] bg-slate-50 rounded-lg overflow-hidden border border-gray-200">
                         <img
-                          src="/imgs/cat_gradcam.png"
+                          src="/imgs/cat_gradcam.jpg"
                           alt="Grad-CAM heatmap"
                           className="w-full h-full object-contain"
                           onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {

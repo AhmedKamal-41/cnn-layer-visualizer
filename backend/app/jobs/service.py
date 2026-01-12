@@ -5,7 +5,7 @@ import logging
 import time
 import uuid
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 import io
 
 import torch
@@ -18,7 +18,7 @@ from app.models.loaders import load_model, preprocess_image
 from app.models.registry import get_model_config
 from app.inspect.hooks import capture_activations
 from app.inspect.feature_maps import save_feature_maps
-from app.inspect.gradcam import generate_gradcam_topk
+from app.inspect.gradcam import generate_gradcam_topk, generate_gradcam_multilayer
 from app.services.cache import cache_service
 
 logger = logging.getLogger("app.jobs.service")
@@ -31,12 +31,13 @@ class JobService:
         """Initialize job service."""
         self._jobs: Dict[str, JobRecord] = {}
         self._job_data: Dict[str, bytes] = {}  # Store image_bytes for each job
+        self._job_params: Dict[str, Tuple[int, List[str]]] = {}  # Store (top_k, cam_layers) for each job
         self._job_queue: asyncio.Queue[str] = asyncio.Queue()
         self._lock: asyncio.Lock = asyncio.Lock()
         self._worker_task: Optional[asyncio.Task] = None
         self._worker_running: bool = False
     
-    async def create_job(self, model_id: str, image_bytes: bytes) -> str:
+    async def create_job(self, model_id: str, image_bytes: bytes, top_k: int = 3, cam_layers: Optional[List[str]] = None) -> str:
         """
         Create a new inference job.
         
@@ -46,13 +47,19 @@ class JobService:
         Args:
             model_id: Model identifier from registry
             image_bytes: Image file bytes
+            top_k: Number of top classes for Grad-CAM (default: 3)
+            cam_layers: List of layer names for Grad-CAM (default: None, uses default layers)
             
         Returns:
             Job ID (UUID string)
         """
+        # Default cam_layers if None
+        if cam_layers is None:
+            cam_layers = ["conv1", "layer1", "layer2", "layer3", "layer4"]
+        
         # Check cache first (if enabled)
         if settings.CACHE_ENABLED:
-            cache_key = cache_service.compute_cache_key(image_bytes, model_id)
+            cache_key = cache_service.compute_cache_key(image_bytes, model_id, top_k=top_k, cam_layers=cam_layers)
             cached_result = cache_service.get(cache_key)
             
             if cached_result is not None:
@@ -86,6 +93,7 @@ class JobService:
             
             self._jobs[job_id] = job_record
             self._job_data[job_id] = image_bytes
+            self._job_params[job_id] = (top_k, cam_layers)
         
         await self._job_queue.put(job_id)
         
@@ -132,10 +140,11 @@ class JobService:
         start_time = time.time()
         
         try:
-            # Get job and image data
+            # Get job, image data, and params
             async with self._lock:
                 job = self._jobs.get(job_id)
                 image_bytes = self._job_data.get(job_id)
+                job_params = self._job_params.get(job_id)
             
             if not job:
                 logger.error(f"Job {job_id} not found in storage")
@@ -150,6 +159,13 @@ class JobService:
                     status=JobStatus.FAILED,
                 )
                 return
+            
+            # Get params (defaults if not found)
+            if job_params:
+                top_k, cam_layers = job_params
+            else:
+                top_k = 3
+                cam_layers = ["conv1", "layer1", "layer2", "layer3", "layer4"]
             
             # Update status to RUNNING
             await self._update_job_progress(
@@ -278,10 +294,20 @@ class JobService:
             serialize_start = time.time()
             await self._update_job_progress(job_id, progress=80, message="Generating GradCAM visualizations")
             
-            # Use last layer as target for Grad-CAM (default)
-            target_layer = layer_paths[-1] if layer_paths else "layer4"
+            # Generate multi-layer Grad-CAM
+            gradcam_data = generate_gradcam_multilayer(
+                model=model,
+                input_tensor=input_tensor,
+                original_image=original_image,
+                cam_layers=cam_layers,
+                job_id=job_id,
+                storage_dir=storage_dir,
+                top_k=top_k,
+                alpha=0.45,
+            )
             
-            # Generate top-K CAM overlays
+            # Generate legacy single-layer CAMs for backward compatibility (use last layer)
+            target_layer = layer_paths[-1] if layer_paths else "layer4"
             cams_data = generate_gradcam_topk(
                 model=model,
                 input_tensor=input_tensor,
@@ -329,7 +355,8 @@ class JobService:
                 prediction={"topk": prediction_classes},
                 layers_metadata=layers_data,
                 assets_manifest={
-                    "cams": cams_list,
+                    "cams": cams_list,  # Legacy format for backward compatibility
+                    "gradcam": gradcam_data,  # New multi-layer format
                 },
                 timings={
                     "preprocess_ms": preprocess_time,
@@ -366,9 +393,10 @@ class JobService:
                     job.progress = 0
             logger.error(f"Job {job_id} failed: {e}", exc_info=True)
         finally:
-            # Clean up image data (always runs, success or failure)
+            # Clean up image data and params (always runs, success or failure)
             async with self._lock:
                 self._job_data.pop(job_id, None)
+                self._job_params.pop(job_id, None)
     
     async def _worker_loop(self) -> None:
         """Background worker loop that processes jobs from queue."""

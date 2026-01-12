@@ -3,7 +3,7 @@
 import hashlib
 import logging
 from collections import OrderedDict
-from typing import Optional
+from typing import Optional, List
 
 from app.core.config import settings
 from app.jobs.models import JobResult
@@ -24,19 +24,29 @@ class CacheService:
         self._cache: OrderedDict[str, JobResult] = OrderedDict()
         self._max_items = max_items
     
-    def compute_cache_key(self, image_bytes: bytes, model_id: str) -> str:
+    def compute_cache_key(self, image_bytes: bytes, model_id: str, top_k: int = 3, cam_layers: Optional[List[str]] = None) -> str:
         """
-        Compute SHA256 hash of image bytes + model_id.
+        Compute SHA256 hash of image bytes + model_id + top_k + cam_layers.
         
         Args:
             image_bytes: Raw image bytes
             model_id: Model identifier
+            top_k: Number of top classes (default: 3)
+            cam_layers: List of layer names for Grad-CAM (default: None, uses default layers)
             
         Returns:
-            Hex digest of cache key (SHA256 of image_bytes + model_id)
+            Hex digest of cache key (SHA256 of image_bytes + model_id + top_k + sorted cam_layers)
         """
-        # Combine image_bytes + model_id (encoded to bytes)
-        combined = image_bytes + model_id.encode('utf-8')
+        # Default cam_layers if None
+        if cam_layers is None:
+            cam_layers = ["conv1", "layer1", "layer2", "layer3", "layer4"]
+        
+        # Sort layers for consistent cache key
+        sorted_layers = sorted(cam_layers)
+        layers_str = ",".join(sorted_layers)
+        
+        # Combine image_bytes + model_id + top_k + layers (encoded to bytes)
+        combined = image_bytes + model_id.encode('utf-8') + str(top_k).encode('utf-8') + layers_str.encode('utf-8')
         return hashlib.sha256(combined).hexdigest()
     
     def get(self, cache_key: str) -> Optional[JobResult]:

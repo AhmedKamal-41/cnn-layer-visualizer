@@ -73,11 +73,33 @@ class LayerInfo(BaseModel):
 
 
 class CAMInfo(BaseModel):
-    """Grad-CAM information."""
+    """Grad-CAM information (legacy single-layer format)."""
     class_id: int
     class_name: str
     prob: float
     overlay_url: str
+
+
+class GradCAMOverlayInfo(BaseModel):
+    """Grad-CAM overlay information for a specific layer."""
+    layer: str
+    url: str
+
+
+class GradCAMClassInfo(BaseModel):
+    """Grad-CAM information for a specific class across multiple layers."""
+    class_id: int
+    class_name: str
+    prob: float
+    overlays: List[GradCAMOverlayInfo]
+
+
+class GradCAMInfo(BaseModel):
+    """Multi-layer Grad-CAM information."""
+    top_k: int
+    classes: List[GradCAMClassInfo]
+    layers: List[str]
+    warnings: Optional[List[str]] = Field(default=None, description="Warnings for skipped layers")
 
 
 class TimingsInfo(BaseModel):
@@ -97,6 +119,7 @@ class JobResultResponse(BaseModel):
     prediction: PredictionInfo
     layers: List[LayerInfo]
     cams: List[CAMInfo]
+    gradcam: Optional[GradCAMInfo] = Field(default=None, description="Multi-layer Grad-CAM information")
     timings: TimingsInfo
 
 

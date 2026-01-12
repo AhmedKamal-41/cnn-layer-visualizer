@@ -2,38 +2,51 @@
 
 import { useState, useMemo } from 'react'
 
+interface LayerInfo {
+  stage: string
+  name: string
+  shape?: { c: number; h: number; w: number }
+}
+
 interface LayerPickerProps {
-  stages: string[]
+  layers: LayerInfo[]
   selectedStage: string | null
   onStageSelect: (stage: string | null) => void
 }
 
-export default function LayerPicker({ stages, selectedStage, onStageSelect }: LayerPickerProps) {
+export default function LayerPicker({ layers, selectedStage, onStageSelect }: LayerPickerProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [pinnedStages, setPinnedStages] = useState<Set<string>>(new Set())
 
-  // Filter and sort stages
-  const filteredAndSortedStages = useMemo(() => {
+  // Extract stages from layers
+  const stages = layers.map((l) => l.stage)
+
+  // Filter and sort layers
+  const filteredAndSortedLayers = useMemo(() => {
     // Filter based on search query
     const filtered = searchQuery
-      ? stages.filter((stage) => stage.toLowerCase().includes(searchQuery.toLowerCase()))
-      : stages
+      ? layers.filter(
+          (layer) =>
+            layer.stage.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            layer.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : layers
 
     // Split into pinned and unpinned
-    const pinned: string[] = []
-    const unpinned: string[] = []
+    const pinned: LayerInfo[] = []
+    const unpinned: LayerInfo[] = []
 
-    filtered.forEach((stage) => {
-      if (pinnedStages.has(stage)) {
-        pinned.push(stage)
+    filtered.forEach((layer) => {
+      if (pinnedStages.has(layer.stage)) {
+        pinned.push(layer)
       } else {
-        unpinned.push(stage)
+        unpinned.push(layer)
       }
     })
 
     // Return pinned first, then unpinned
     return [...pinned, ...unpinned]
-  }, [stages, searchQuery, pinnedStages])
+  }, [layers, searchQuery, pinnedStages])
 
   // Toggle pin state
   const togglePin = (stage: string, e: React.MouseEvent) => {
@@ -67,24 +80,32 @@ export default function LayerPicker({ stages, selectedStage, onStageSelect }: La
     </svg>
   )
 
+  // Get layer data for stages to show names and shapes
+  const jobData = stages as any // Temporary - will be passed from parent
+  const getLayerData = (stage: string) => {
+    // This will be provided by parent component
+    return null
+  }
+
   return (
     <div className="p-6 h-full flex flex-col">
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">Stages</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Layers</h2>
+      <p className="text-xs text-gray-500 mb-4">Start from conv1 and move right.</p>
       
-      {/* Search Box */}
+      {/* Search Box - Keep for now but can be removed if desired */}
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search stages..."
+          placeholder="Search layers..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
         />
       </div>
 
-      {/* Stage List */}
+      {/* Layer List */}
       <div className="space-y-2 flex-1 overflow-y-auto">
-        {filteredAndSortedStages.length === 0 ? (
+        {filteredAndSortedLayers.length === 0 ? (
           <div className="text-center py-12 px-4">
             <svg
               className="w-12 h-12 mx-auto mb-4 text-gray-400"
@@ -100,23 +121,26 @@ export default function LayerPicker({ stages, selectedStage, onStageSelect }: La
               />
             </svg>
             <p className="text-sm font-medium text-gray-700 mb-1">
-              {searchQuery ? 'No stages match your search' : 'No stages available'}
+              {searchQuery ? 'No layers match your search' : 'No layers available'}
             </p>
             {!searchQuery && (
               <p className="text-xs text-gray-500">
-                Stages will appear once the job completes processing
+                Layers will appear once the job completes processing
               </p>
             )}
           </div>
         ) : (
-          filteredAndSortedStages.map((stage) => {
-            const isPinned = pinnedStages.has(stage)
-            const isSelected = selectedStage === stage
+          filteredAndSortedLayers.map((layer) => {
+            const isPinned = pinnedStages.has(layer.stage)
+            const isSelected = selectedStage === layer.stage
+            const shapeStr = layer.shape
+              ? `${layer.shape.c}×${layer.shape.h}×${layer.shape.w}`
+              : ''
 
             return (
               <button
-                key={stage}
-                onClick={() => onStageSelect(stage === selectedStage ? null : stage)}
+                key={layer.stage}
+                onClick={() => onStageSelect(layer.stage === selectedStage ? null : layer.stage)}
                 className={`
                   w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center justify-between gap-2
                   ${
@@ -126,14 +150,21 @@ export default function LayerPicker({ stages, selectedStage, onStageSelect }: La
                   }
                 `}
               >
-                <span className="text-sm font-semibold flex-1 truncate">{stage}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{layer.name}</div>
+                  {shapeStr && (
+                    <div className={`text-xs mt-0.5 ${isSelected ? 'text-blue-100' : 'text-gray-500'}`}>
+                      {shapeStr}
+                    </div>
+                  )}
+                </div>
                 <button
-                  onClick={(e) => togglePin(stage, e)}
+                  onClick={(e) => togglePin(layer.stage, e)}
                   className={`
                     flex-shrink-0 p-1 rounded hover:bg-opacity-20 transition-colors
                     ${isSelected ? 'hover:bg-white' : 'hover:bg-gray-300'}
                   `}
-                  title={isPinned ? 'Unpin stage' : 'Pin stage'}
+                  title={isPinned ? 'Unpin layer' : 'Pin layer'}
                 >
                   <StarIcon isPinned={isPinned} />
                 </button>

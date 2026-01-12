@@ -187,6 +187,11 @@ export default function FeatureMapGrid({ job, selectedStage }: FeatureMapGridPro
             )
           })}
         </div>
+        
+        {/* Caption */}
+        <p className="text-sm text-gray-600 text-center mt-4 italic">
+          Each image is one learned filter output.
+        </p>
       </div>
 
       {/* Modal */}

@@ -4,13 +4,26 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import JobStatusBanner from '@/components/JobStatusBanner'
 import NetworkGraph from '@/components/NetworkGraph'
+import ArchitectureBar from '@/components/ArchitectureBar'
 import LayerPicker from '@/components/LayerPicker'
 import VisualizationCanvas from '@/components/VisualizationCanvas'
 import LayerInfoPanel from '@/components/LayerInfoPanel'
 import FeatureMapGrid from '@/components/FeatureMapGrid'
 import HeatmapOverlay from '@/components/HeatmapOverlay'
+import GradCAMTimeline from '@/components/GradCAMTimeline'
+import GradCAMControls from '@/components/GradCAMControls'
+import LayerExplainer from '@/components/LayerExplainer'
+import RightDetailsPanel from '@/components/RightDetailsPanel'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { getJobStatus, JobResponse, createJob, getModels, Model } from '@/lib/api'
+import { useRouter } from 'next/navigation'
+
+// Layer type interface
+interface Layer {
+  name: string
+  stage: string | null
+  shape?: { c: number; h: number; w: number }
+}
 
 function ViewerPageContent() {
   const params = useParams()
@@ -165,7 +178,7 @@ function ViewerPageContent() {
     const data = jobData as any
     const layers = data.layers || []
     const stages = layers
-      .map((l: any) => l.stage)
+      .map((l: Layer) => l.stage)
       .filter((s: string | null) => s !== null && s !== undefined)
       .filter((s: string, index: number, arr: string[]) => arr.indexOf(s) === index) // unique
       .sort()
@@ -175,10 +188,38 @@ function ViewerPageContent() {
   // Compute available stages using useMemo
   const availableStages = useMemo(() => getAvailableStages(job), [job])
 
+  // Get layers data for LayerPicker and ArchitectureBar
+  const layers = useMemo(() => {
+    if (!job || job.status !== 'succeeded') return []
+    const jobData = job as any
+    return (jobData.layers || []).filter((l: Layer) => l.stage !== null && l.stage !== undefined)
+  }, [job])
+
+  // Get selected layer data
+  const selectedLayerData = useMemo(() => {
+    if (!selectedLayer || !job || job.status !== 'succeeded') return null
+    const jobData = job as any
+    return (jobData.layers || []).find((l: Layer) => l.stage === selectedLayer) || null
+  }, [selectedLayer, job])
+
+  // Get layers for compare mode (must be before any early returns)
+  const compareModeLayers = useMemo(() => {
+    if (compareMode && secondJob?.status === 'succeeded') {
+      const secondJobData = secondJob as any
+      return (secondJobData.layers || []).filter((l: Layer) => l.stage !== null && l.stage !== undefined)
+    }
+    return layers
+  }, [compareMode, secondJob, layers])
+
   // Auto-advance state
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
   const autoAdvanceIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const AUTO_ADVANCE_INTERVAL = 2500 // 2.5 seconds
+  
+  // Grad-CAM settings state
+  const router = useRouter()
+  const [topK, setTopK] = useState(3)
+  const [camLayers, setCamLayers] = useState<string[]>(['conv1', 'layer1', 'layer2', 'layer3', 'layer4'])
 
   // Navigate to next/previous stage
   const navigateStage = useCallback(
@@ -310,7 +351,7 @@ function ViewerPageContent() {
     if (!jobData || jobData.status !== 'succeeded' || !stage) return null
     const data = jobData as any
     const layers = data.layers || []
-    return layers.find((l: any) => l.stage === stage) || null
+    return layers.find((l: Layer) => l.stage === stage) || null
   }
 
   // Calculate diff summary
@@ -321,21 +362,19 @@ function ViewerPageContent() {
       ? Math.abs(job1Pred.prob - job2Pred.prob) * 100
       : null
 
-  // Get job data
+  // Get job data (computed after all hooks, safe to use in render)
   const jobData = job as any
   const secondJobData = secondJob as any
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Top: NetworkGraph (only show if not in compare mode) */}
-      {!compareMode && (
-        <div className="border-b bg-white">
-          <NetworkGraph
-            job={job.status === 'succeeded' ? job : null}
-            selectedStage={selectedLayer}
-            onStageSelect={setSelectedLayer}
-          />
-        </div>
+      {/* Top: ArchitectureBar (only show if not in compare mode and job succeeded) */}
+      {!compareMode && job?.status === 'succeeded' && (
+        <ArchitectureBar
+          job={job}
+          selectedStage={selectedLayer}
+          onLayerSelect={setSelectedLayer}
+        />
       )}
 
       {/* Status Banner */}
@@ -500,7 +539,7 @@ function ViewerPageContent() {
             {/* Left: LayerPicker */}
             <aside className="w-1/4 border-r bg-white overflow-y-auto">
               <LayerPicker
-                stages={availableStages}
+                layers={compareModeLayers}
                 selectedStage={selectedLayer}
                 onStageSelect={setSelectedLayer}
               />
@@ -579,28 +618,79 @@ function ViewerPageContent() {
             {/* Left: LayerPicker */}
             <aside className="w-1/4 border-r bg-white overflow-y-auto">
               <LayerPicker
-                stages={availableStages}
+                layers={layers}
                 selectedStage={selectedLayer}
                 onStageSelect={setSelectedLayer}
               />
             </aside>
 
-            {/* Center: VisualizationCanvas */}
+            {/* Center: Layer Learning View */}
             <main className="flex-1 bg-gray-50 overflow-y-auto">
-              <VisualizationCanvas job={job} selectedStage={selectedLayer} />
+              <div className="p-6">
+                {/* Header: LayerExplainer */}
+                <LayerExplainer
+                  layerName={selectedLayerData?.name || null}
+                  layerStage={selectedLayer || null}
+                />
+
+                {/* Section A: Feature Maps */}
+                {selectedLayer && (
+                  <div className="mb-8">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Feature Maps</h2>
+                    <FeatureMapGrid job={job} selectedStage={selectedLayer} />
+                  </div>
+                )}
+
+                {/* Section B: Grad-CAM Timeline (only if data exists) */}
+                {job.status === 'succeeded' && (
+                  <GradCAMTimeline job={job} selectedStage={selectedLayer} />
+                )}
+              </div>
             </main>
 
-            {/* Right: LayerInfoPanel */}
-            <aside className="w-1/4 border-l bg-white overflow-y-auto">
-              <LayerInfoPanel job={job} selectedStage={selectedLayer} />
-            </aside>
+            {/* Right: RightDetailsPanel (sticky) */}
+            <RightDetailsPanel
+              job={job}
+              selectedStage={selectedLayer}
+              compareMode={compareMode}
+              onCompareModeChange={(enabled) => {
+                setCompareMode(enabled)
+                setIsAutoAdvancing(false)
+                if (!enabled) {
+                  setSecondModelId(null)
+                  setSecondJob(null)
+                  setSecondJobError(null)
+                }
+              }}
+              topK={topK}
+              camLayers={camLayers}
+              availableLayers={jobData.gradcam?.layers || ['conv1', 'layer1', 'layer2', 'layer3', 'layer4']}
+              onTopKChange={setTopK}
+              onLayersChange={setCamLayers}
+              onApplySettings={async () => {
+                try {
+                  const inputImageUrl = jobData.input?.image_url
+                  if (!inputImageUrl) return
+                  
+                  const imageFile = await urlToFile(inputImageUrl)
+                  const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
+                  router.push(`/viewer/${newJob.job_id}`)
+                } catch (err) {
+                  console.error('Failed to re-run job:', err)
+                  setError(err instanceof Error ? err.message : 'Failed to re-run job')
+                }
+              }}
+              models={models}
+              secondModelId={secondModelId}
+              onSecondModelChange={setSecondModelId}
+            />
           </div>
         )
       ) : (
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-            <p className="text-gray-600">{job.message || 'Processing...'}</p>
+            <p className="text-gray-600">Processing your image… feature maps will appear automatically.</p>
           </div>
         </div>
       )}

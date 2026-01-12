@@ -17,6 +17,9 @@ from app.jobs.models import (
     LayerShape,
     ChannelInfo,
     CAMInfo,
+    GradCAMInfo,
+    GradCAMClassInfo,
+    GradCAMOverlayInfo,
     TimingsInfo,
 )
 from app.core.config import settings
@@ -28,6 +31,8 @@ router = APIRouter()
 async def create_job(
     image: UploadFile = File(...),
     model_id: str = Form(...),
+    top_k: Optional[int] = Form(None),
+    cam_layers: Optional[str] = Form(None),
 ):
     """
     Create a new inference job.
@@ -35,6 +40,8 @@ async def create_job(
     Args:
         image: Image file to process
         model_id: Model identifier from registry
+        top_k: Number of top classes for Grad-CAM (default: 3, range: 1-5)
+        cam_layers: Comma-separated layer names for Grad-CAM (default: "conv1,layer1,layer2,layer3,layer4")
         
     Returns:
         JobRecord with job_id and status
@@ -66,8 +73,22 @@ async def create_job(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading image file: {str(e)}")
     
+    # Parse and validate top_k
+    if top_k is None:
+        top_k = 3
+    elif top_k < 1 or top_k > 5:
+        raise HTTPException(status_code=400, detail="top_k must be between 1 and 5")
+    
+    # Parse and validate cam_layers
+    if cam_layers is None:
+        cam_layers_list = ["conv1", "layer1", "layer2", "layer3", "layer4"]
+    else:
+        cam_layers_list = [layer.strip() for layer in cam_layers.split(",") if layer.strip()]
+        if not cam_layers_list:
+            raise HTTPException(status_code=400, detail="cam_layers must contain at least one layer")
+    
     # Create job
-    job_id = await job_service.create_job(model_id, image_bytes)
+    job_id = await job_service.create_job(model_id, image_bytes, top_k=top_k, cam_layers=cam_layers_list)
     
     # Return job record
     job = await job_service.get_job(job_id)
@@ -140,7 +161,7 @@ async def get_job_status(job_id: str):
             )
         )
     
-    # Build CAMs info
+    # Build CAMs info (legacy format)
     cams_data = result.assets_manifest.get("cams", [])
     cams_list = [
         CAMInfo(
@@ -151,6 +172,34 @@ async def get_job_status(job_id: str):
         )
         for item in cams_data
     ]
+    
+    # Build Grad-CAM info (multi-layer format)
+    gradcam_data = result.assets_manifest.get("gradcam")
+    gradcam_info = None
+    if gradcam_data:
+        classes_list = []
+        for class_data in gradcam_data.get("classes", []):
+            overlays_list = [
+                GradCAMOverlayInfo(
+                    layer=overlay["layer"],
+                    url=overlay["url"],
+                )
+                for overlay in class_data.get("overlays", [])
+            ]
+            classes_list.append(
+                GradCAMClassInfo(
+                    class_id=class_data["class_id"],
+                    class_name=class_data["class_name"],
+                    prob=class_data["prob"],
+                    overlays=overlays_list,
+                )
+            )
+        gradcam_info = GradCAMInfo(
+            top_k=gradcam_data.get("top_k", 3),
+            classes=classes_list,
+            layers=gradcam_data.get("layers", []),
+            warnings=gradcam_data.get("warnings"),
+        )
     
     # Build timings
     timings_data = result.timings
@@ -170,6 +219,7 @@ async def get_job_status(job_id: str):
         prediction=PredictionInfo(topk=prediction_classes),
         layers=layers_list,
         cams=cams_list,
+        gradcam=gradcam_info,
         timings=timings,
     )
     

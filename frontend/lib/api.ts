@@ -27,6 +27,25 @@ export interface HealthResponse {
   status: string
 }
 
+export interface GradCAMOverlayInfo {
+  layer: string
+  url: string
+}
+
+export interface GradCAMClassInfo {
+  class_id: number
+  class_name: string
+  prob: number
+  overlays: GradCAMOverlayInfo[]
+}
+
+export interface GradCAMInfo {
+  top_k: number
+  classes: GradCAMClassInfo[]
+  layers: string[]
+  warnings?: string[]
+}
+
 /**
  * Get list of available models
  */
@@ -46,11 +65,21 @@ export async function getModels(): Promise<Model[]> {
  */
 export async function createJob(
   image: File,
-  modelId: string
+  modelId: string,
+  topK?: number,
+  camLayers?: string[]
 ): Promise<JobResponse> {
   const formData = new FormData()
   formData.append('image', image)
   formData.append('model_id', modelId)
+  
+  if (topK !== undefined) {
+    formData.append('top_k', topK.toString())
+  }
+  
+  if (camLayers !== undefined && camLayers.length > 0) {
+    formData.append('cam_layers', camLayers.join(','))
+  }
 
   const response = await fetch('/api/v1/jobs', {
     method: 'POST',

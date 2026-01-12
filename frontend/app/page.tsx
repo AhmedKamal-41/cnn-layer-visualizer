@@ -273,7 +273,7 @@ export default function Home() {
                 <div className="flex items-center justify-between p-6 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-lg border border-indigo-200/50">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Prediction</div>
-                    <div className="text-base md:text-lg font-semibold text-gray-900 truncate">Golden Retriever</div>
+                    <div className="text-base md:text-lg font-semibold text-gray-900 truncate">Cat</div>
                   </div>
                   <div className="ml-4 flex-shrink-0">
                     <div className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-lg md:text-xl font-bold rounded-lg shadow-md">

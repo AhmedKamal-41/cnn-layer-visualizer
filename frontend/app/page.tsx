@@ -85,6 +85,14 @@ export default function Home() {
   const selectedModelData = models.find((m: Model) => m.id === selectedModel)
   const selectedModelInfo = selectedModelData ? modelInfo[selectedModelData.id] : null
 
+  // Grid pattern style for hero background
+  const gridPattern = {
+    backgroundImage: `
+      repeating-linear-gradient(0deg, rgba(99, 102, 241, 0.06) 0px, transparent 1px, transparent 40px, rgba(99, 102, 241, 0.06) 41px),
+      repeating-linear-gradient(90deg, rgba(99, 102, 241, 0.06) 0px, transparent 1px, transparent 40px, rgba(99, 102, 241, 0.06) 41px)
+    `,
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar
@@ -96,12 +104,23 @@ export default function Home() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 md:py-16 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative py-12 md:py-16 overflow-hidden">
+          {/* Layered Background: Base gradient + Radial blobs + Grid pattern */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50"
+            style={gridPattern}
+          >
+            {/* Radial blob 1 - Top left */}
+            <div className="absolute top-0 left-0 w-96 h-96 bg-violet-400/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+            {/* Radial blob 2 - Mid right */}
+            <div className="absolute top-1/2 right-0 w-96 h-96 bg-indigo-400/15 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+          </div>
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               {/* Left Column */}
               <div>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-6 leading-tight">
                   Visualize how CNNs transform images into predictions
                 </h1>
                 <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
@@ -109,37 +128,55 @@ export default function Home() {
                 </p>
 
                 {/* CTAs */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <button
                     onClick={scrollToUpload}
-                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-violet-700 hover:shadow-xl hover:shadow-violet-400/50 active:scale-[0.98] transition-all duration-200"
                   >
                     Try Demo
                   </button>
                   <button
                     onClick={scrollToHowItWorks}
-                    className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors border border-gray-300"
+                    className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:shadow-md transition-all duration-200 border border-gray-300"
                   >
                     Learn How It Works
                   </button>
                 </div>
 
+                {/* Trusted by section */}
+                <div className="mb-8">
+                  <p className="text-xs text-gray-500 mb-3 uppercase tracking-wide">Trusted by</p>
+                  <div className="flex flex-wrap items-center gap-4">
+                    {[
+                      { icon: '🔬', label: 'Research Labs' },
+                      { icon: '🎓', label: 'Students' },
+                      { icon: '⚙️', label: 'Engineers' },
+                      { icon: '📊', label: 'Data Teams' },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5 text-sm text-gray-600 opacity-70">
+                        <span>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Quick bullets */}
                 <div className="space-y-2">
                   <div className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="text-sm font-medium">Layer activations</span>
                   </div>
                   <div className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="text-sm font-medium">Grad-CAM heatmaps</span>
                   </div>
                   <div className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="text-sm font-medium">Prediction breakdown</span>
@@ -149,41 +186,46 @@ export default function Home() {
 
               {/* Right Column - Product Preview Mock */}
               <div className="hidden md:block">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-200">
-                  {/* Mock layer visualization */}
-                  <div className="space-y-4">
-                    {/* Layer chips */}
-                    <div className="flex gap-2 flex-wrap">
-                      {['conv1', 'layer1', 'layer2', 'layer3', 'layer4'].map((layer, idx) => (
-                        <div
-                          key={layer}
-                          className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full"
-                        >
-                          {layer}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Mock graph/visualization */}
-                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                      <div className="space-y-3">
-                        {/* Mock bars/channels */}
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <div key={i} className="flex items-center gap-3">
-                            <div className="w-16 h-3 bg-gradient-to-r from-blue-400 to-indigo-500 rounded" style={{ width: `${60 + i * 8}%` }}></div>
-                            <div className="text-xs text-gray-500 w-8">Ch{i}</div>
-                          </div>
-                        ))}
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-6 border border-gray-200/50">
+                  {/* Layer pipeline chips */}
+                  <div className="flex gap-2 flex-wrap mb-4">
+                    {['Conv', 'Pool', 'Block', 'Head'].map((layer, idx) => (
+                      <div
+                        key={layer}
+                        className="px-3 py-1.5 bg-gradient-to-r from-indigo-100 to-violet-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200/50"
+                      >
+                        {layer}
                       </div>
-                    </div>
+                    ))}
+                  </div>
 
-                    {/* Mock prediction */}
-                    <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900">Prediction</div>
-                        <div className="text-xs text-gray-600">Golden Retriever</div>
-                      </div>
-                      <div className="text-lg font-bold text-blue-600">94.2%</div>
+                  {/* Fake activation heatmap */}
+                  <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg p-4 border border-gray-200 mb-4">
+                    <div className="grid grid-cols-6 gap-1.5">
+                      {Array.from({ length: 24 }).map((_, i) => {
+                        const intensity = Math.sin(i * 0.5) * 0.5 + 0.5
+                        const hue = intensity * 180 + 240 // indigo-violet range
+                        return (
+                          <div
+                            key={i}
+                            className="aspect-square rounded"
+                            style={{
+                              background: `linear-gradient(135deg, hsl(${hue}, 70%, ${50 + intensity * 30}%), hsl(${hue + 20}, 70%, ${40 + intensity * 40}%))`,
+                            }}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Final Prediction pill */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-lg border border-indigo-200/50 shadow-sm">
+                    <div>
+                      <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Prediction</div>
+                      <div className="text-sm font-semibold text-gray-900">Golden Retriever</div>
+                    </div>
+                    <div className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-lg font-bold rounded-lg shadow-md">
+                      94.2%
                     </div>
                   </div>
                 </div>
@@ -196,7 +238,7 @@ export default function Home() {
         <section ref={featuresRef} id="features" className="py-10 md:py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                 What You'll See
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -206,10 +248,11 @@ export default function Home() {
 
             <div className="grid md:grid-cols-3 gap-6">
               {/* Feature Map Card */}
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md hover:shadow-violet-400/10 hover:-translate-y-1 hover:border-indigo-200 transition-all">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-lg flex items-center justify-center mb-4">
+                  {/* Layers icon - Stacked rectangles */}
+                  <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Feature Maps</h3>
@@ -219,10 +262,22 @@ export default function Home() {
               </div>
 
               {/* Grad-CAM Card */}
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md hover:shadow-violet-400/10 hover:-translate-y-1 hover:border-indigo-200 transition-all">
+                <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-violet-200 rounded-lg flex items-center justify-center mb-4">
+                  {/* Heatmap/Gradient icon */}
+                  <svg className="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <defs>
+                      <linearGradient id="heatmapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
+                        <stop offset="50%" stopColor="currentColor" stopOpacity="0.6" />
+                        <stop offset="100%" stopColor="currentColor" stopOpacity="1" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="3" y="3" width="18" height="18" rx="2" fill="url(#heatmapGrad)" stroke="currentColor" strokeWidth="2" />
+                    <circle cx="9" cy="9" r="1.5" fill="currentColor" />
+                    <circle cx="15" cy="9" r="1.5" fill="currentColor" />
+                    <circle cx="9" cy="15" r="1.5" fill="currentColor" />
+                    <circle cx="15" cy="15" r="1.5" fill="currentColor" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Grad-CAM</h3>
@@ -232,8 +287,9 @@ export default function Home() {
               </div>
 
               {/* Prediction Breakdown Card */}
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md hover:shadow-violet-400/10 hover:-translate-y-1 hover:border-indigo-200 transition-all">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center mb-4">
+                  {/* Bar chart icon */}
                   <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
@@ -251,7 +307,7 @@ export default function Home() {
         <section ref={modelsRef} id="models" className="py-10 md:py-16 bg-slate-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                 Choose a Model
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -274,14 +330,14 @@ export default function Home() {
                     className={`
                       relative text-left bg-white rounded-xl p-6 border-2 transition-all
                       ${isSelected
-                        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                        ? 'border-indigo-600 bg-indigo-50 ring-2 ring-violet-200 shadow-lg shadow-violet-400/20'
+                        : 'border-gray-200 hover:border-indigo-200 hover:shadow-md'
                       }
-                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
                     `}
                   >
                     {isSelected && (
-                      <div className="absolute top-4 right-4 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                      <div className="absolute top-4 right-4 w-6 h-6 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-full flex items-center justify-center shadow-md">
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
@@ -310,7 +366,7 @@ export default function Home() {
         <section ref={uploadSectionRef} id="get-started" className="py-10 md:py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                 Get Started
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -319,7 +375,7 @@ export default function Home() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 md:p-8">
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid md:grid-cols-2 gap-8 items-start">
                 {/* Left: Upload */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload Image</h3>
@@ -333,7 +389,7 @@ export default function Home() {
                 <div className="space-y-4">
                   {/* Selected Model Summary */}
                   {selectedModelData && selectedModelInfo ? (
-                    <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                    <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl p-6 border border-indigo-200/50">
                       <h3 className="text-lg font-semibold text-gray-900 mb-3">Selected Model</h3>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -353,7 +409,7 @@ export default function Home() {
                   <button
                     onClick={handleAnalyze}
                     disabled={!selectedFile || !selectedModel || isSubmitting}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl"
+                    className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:from-indigo-700 hover:to-violet-700 hover:shadow-xl hover:shadow-violet-400/50 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed disabled:hover:shadow-none active:scale-[0.98] transition-all duration-200 flex items-center justify-center"
                   >
                     {isSubmitting ? (
                       <>
@@ -418,7 +474,7 @@ export default function Home() {
         <section ref={howItWorksRef} className="py-10 md:py-16 bg-slate-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                 How It Works
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -437,7 +493,7 @@ export default function Home() {
                 ].map((step, idx) => (
                   <div key={step.num} className="relative">
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4 relative z-10">
+                      <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4 relative z-10 shadow-lg">
                         {step.num}
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h3>
@@ -445,7 +501,7 @@ export default function Home() {
                     </div>
                     {/* Connector line */}
                     {idx < 3 && (
-                      <div className="absolute top-8 left-full w-full h-0.5 bg-gray-300 transform translate-x-3" style={{ width: 'calc(100% - 3rem)' }}></div>
+                      <div className="absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-indigo-300 to-violet-300" style={{ left: 'calc(50% + 2rem)', width: 'calc(100% - 4rem)' }}></div>
                     )}
                   </div>
                 ))}
@@ -461,11 +517,11 @@ export default function Home() {
                 ].map((step, idx) => (
                   <div key={step.num} className="flex gap-4">
                     <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-bold">
+                      <div className="w-12 h-12 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full flex items-center justify-center text-lg font-bold shadow-md">
                         {step.num}
                       </div>
                       {idx < 3 && (
-                        <div className="w-0.5 h-8 bg-gray-300 mx-auto mt-2"></div>
+                        <div className="w-0.5 h-8 bg-gradient-to-b from-indigo-300 to-violet-300 mx-auto mt-2"></div>
                       )}
                     </div>
                     <div>

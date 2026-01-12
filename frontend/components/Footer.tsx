@@ -22,17 +22,17 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-gray-900 mb-4">Product</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#features" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                <a href="#features" className="text-sm text-gray-600 hover:text-indigo-600 transition-colors">
                   Features
                 </a>
               </li>
               <li>
-                <a href="#models" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                <a href="#models" className="text-sm text-gray-600 hover:text-indigo-600 transition-colors">
                   Models
                 </a>
               </li>
               <li>
-                <a href="#get-started" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                <a href="#get-started" className="text-sm text-gray-600 hover:text-indigo-600 transition-colors">
                   Get Started
                 </a>
               </li>
@@ -48,7 +48,7 @@ export default function Footer() {
                   href="https://github.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-600 hover:text-blue-600 transition-colors flex items-center gap-1"
+                  className="text-sm text-gray-600 hover:text-indigo-600 transition-colors flex items-center gap-1"
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
@@ -71,7 +71,7 @@ export default function Footer() {
             </p>
             <button
               onClick={scrollToTop}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
             >
               Back to top ↑
             </button>
@@ -87,4 +87,3 @@ export default function Footer() {
     </footer>
   )
 }
-

@@ -1,6 +1,8 @@
 'use client'
 
 import { useRef, useState, useEffect, useMemo } from 'react'
+import { formatPrediction } from '@/lib/labels'
+import { useLabelMap } from '@/lib/useLabelMap'
 
 interface NetworkDiagramProps {
   layers: Array<{ name: string; stage: string | null; shape?: { c: number; h: number; w: number } }>
@@ -35,6 +37,7 @@ export default function NetworkDiagram({
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 200 })
   const [hoveredStage, setHoveredStage] = useState<string | null>(null)
+  const labelMap = useLabelMap()
 
   // Setup ResizeObserver
   useEffect(() => {
@@ -289,8 +292,18 @@ export default function NetworkDiagram({
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Prediction</h3>
                 {predictionLabel && predictionProb !== undefined ? (
                   <div className="flex-1 flex flex-col justify-center">
-                    <div className="text-lg font-bold text-gray-900 truncate mb-2">{predictionLabel}</div>
-                    <div className="text-2xl font-bold text-blue-600">{(predictionProb * 100).toFixed(1)}%</div>
+                    {(() => {
+                      const formatted = formatPrediction(predictionLabel, predictionProb, predictionLabel, labelMap || undefined)
+                      return (
+                        <>
+                          <div className="text-lg font-bold text-gray-900 truncate mb-1">{formatted.name}</div>
+                          {formatted.raw !== formatted.name && (
+                            <div className="text-xs text-gray-500 mb-2">({formatted.raw})</div>
+                          )}
+                          <div className="text-2xl font-bold text-blue-600">{formatted.pct}%</div>
+                        </>
+                      )
+                    })()}
                   </div>
                 ) : (
                   <div className="flex-1 flex items-center justify-center">

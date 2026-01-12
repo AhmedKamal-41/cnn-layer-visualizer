@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { JobResponse } from '@/lib/api'
+import { formatPrediction } from '@/lib/labels'
+import { useLabelMap } from '@/lib/useLabelMap'
 
 interface HeatmapOverlayProps {
   job: JobResponse | null
@@ -16,6 +18,7 @@ function formatProbability(prob: number): string {
 export default function HeatmapOverlay({ job, selectedStage }: HeatmapOverlayProps) {
   const [selectedCamIndex, setSelectedCamIndex] = useState(0)
   const [opacity, setOpacity] = useState(45) // 0-100, default 45%
+  const labelMap = useLabelMap()
 
   // Extract data from job result
   const jobData = job as any
@@ -107,10 +110,18 @@ export default function HeatmapOverlay({ job, selectedStage }: HeatmapOverlayPro
       {/* Caption */}
       {selectedCam && (
         <div className="mt-4 text-center">
-          <p className="text-sm font-medium text-gray-700">
-            Evidence for: <span className="font-semibold">{selectedCam.class_name}</span> (
-            <span className="font-semibold">{formatProbability(selectedCam.prob)}</span>)
-          </p>
+          {(() => {
+            const formatted = formatPrediction(selectedCam.class_name, selectedCam.prob, selectedCam.class_name, labelMap || undefined)
+            return (
+              <p className="text-sm font-medium text-gray-700">
+                Evidence for: <span className="font-semibold">{formatted.name}</span>
+                {formatted.raw !== formatted.name && (
+                  <span className="text-xs text-gray-500 ml-1">({formatted.raw})</span>
+                )}{' '}
+                (<span className="font-semibold">{formatted.pct}%</span>)
+              </p>
+            )
+          })()}
         </div>
       )}
     </div>

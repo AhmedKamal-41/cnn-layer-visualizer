@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { formatPrediction } from '@/lib/labels'
+import { useLabelMap } from '@/lib/useLabelMap'
 import { JobResponse } from '@/lib/api'
 
 interface RightDetailsPanelProps {
@@ -35,6 +37,7 @@ export default function RightDetailsPanel({
   onSecondModelChange,
 }: RightDetailsPanelProps) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
+  const labelMap = useLabelMap()
 
   const jobData = job as any
   const selectedLayerData = jobData?.layers?.find((l: any) => l.stage === selectedStage)
@@ -43,7 +46,9 @@ export default function RightDetailsPanel({
   const topPrediction = job?.status === 'succeeded' ? jobData?.prediction?.topk?.[0] : null
   const predictionLabel = topPrediction?.class_name || '—'
   const predictionProb = topPrediction?.prob ?? null
-  const predictionPercent = predictionProb != null ? (predictionProb * 100).toFixed(1) : null
+  
+  // Get topk array for Top Predictions section
+  const topk = job?.status === 'succeeded' ? jobData?.prediction?.topk : null
 
   return (
     <aside className="w-1/4 border-l bg-white overflow-y-auto">
@@ -53,19 +58,27 @@ export default function RightDetailsPanel({
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
             Final Prediction
           </h3>
-          {topPrediction ? (
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="text-3xl font-bold text-gray-900 truncate" title={predictionLabel}>
-                  {predictionLabel}
+          {topPrediction && predictionProb != null ? (
+            (() => {
+              const formatted = formatPrediction(predictionLabel, predictionProb, predictionLabel, labelMap || undefined)
+              return (
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-3xl font-bold text-gray-900 truncate" title={formatted.name}>
+                      {formatted.name}
+                    </div>
+                    {formatted.raw !== formatted.name && (
+                      <div className="text-xs text-gray-500 mt-1">({formatted.raw})</div>
+                    )}
+                  </div>
+                  {formatted.pct && (
+                    <div className="flex-shrink-0 px-4 py-2 bg-blue-600 text-white text-2xl font-bold rounded-lg shadow-sm">
+                      {formatted.pct}%
+                    </div>
+                  )}
                 </div>
-              </div>
-              {predictionPercent && (
-                <div className="flex-shrink-0 px-4 py-2 bg-blue-600 text-white text-2xl font-bold rounded-lg shadow-sm">
-                  {predictionPercent}%
-                </div>
-              )}
-            </div>
+              )
+            })()
           ) : (
             <div className="text-center py-4">
               <div className="text-2xl font-semibold text-gray-400 mb-1">—</div>
@@ -73,6 +86,31 @@ export default function RightDetailsPanel({
             </div>
           )}
         </div>
+
+        {/* Top Predictions Section */}
+        {topk && topk.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
+              Top Predictions
+            </h3>
+            <div className="space-y-2">
+              {topk.slice(0, 5).map((pred: any, idx: number) => {
+                const formatted = formatPrediction(pred.class_name, pred.prob, pred.class_name, labelMap || undefined)
+                return (
+                  <div key={idx} className="text-sm">
+                    <span className="font-medium text-gray-600">{idx + 1})</span>{' '}
+                    <span className="font-semibold text-gray-900">{formatted.name}</span>
+                    {' — '}
+                    <span className="text-blue-600">{formatted.pct}%</span>
+                    {formatted.raw !== formatted.name && (
+                      <span className="text-xs text-gray-500 ml-1">({formatted.raw})</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Details</h2>
 

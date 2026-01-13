@@ -43,5 +43,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD sh -c 'python -c "import os; import urllib.request; port = os.getenv(\"PORT\", \"8000\"); urllib.request.urlopen(f\"http://localhost:{port}/api/v1/health\")"'
 
 # Run uvicorn (uses PORT env var with fallback to 8000 for local dev)
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD sh -c 'uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'
+
 

@@ -24,6 +24,20 @@ function getApiUrl(path: string): string {
   return path
 }
 
+/**
+ * Convert relative image URLs to absolute URLs using API base URL
+ * This is needed when frontend and backend are on different domains
+ */
+export function getImageUrl(relativeUrl: string): string {
+  if (!relativeUrl) return relativeUrl
+  // If it's already an absolute URL, return as-is
+  if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
+    return relativeUrl
+  }
+  // Use getApiUrl to convert relative path to absolute URL
+  return getApiUrl(relativeUrl)
+}
+
 export interface CreateJobRequest {
   image: File
   model_id: string

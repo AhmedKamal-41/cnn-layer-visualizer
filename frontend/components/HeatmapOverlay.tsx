@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { JobResponse } from '@/lib/api'
+import { JobResponse, getImageUrl } from '@/lib/api'
 import { formatPrediction } from '@/lib/labels'
 import { useLabelMap } from '@/lib/useLabelMap'
 
@@ -81,7 +81,7 @@ export default function HeatmapOverlay({ job, selectedStage }: HeatmapOverlayPro
       <div className="flex-1 relative bg-gray-100 rounded-lg overflow-hidden">
         {/* Input Image (Base Layer) */}
         <img
-          src={inputImageUrl}
+          src={inputImageUrl ? getImageUrl(inputImageUrl) : undefined}
           alt="Input image"
           className="w-full h-full object-contain"
           onError={(e) => {
@@ -93,7 +93,7 @@ export default function HeatmapOverlay({ job, selectedStage }: HeatmapOverlayPro
         {/* CAM Overlay */}
         {selectedCam && (
           <img
-            src={selectedCam.overlay_url}
+            src={selectedCam ? getImageUrl(selectedCam.overlay_url) : undefined}
             alt={`CAM overlay for ${selectedCam.class_name}`}
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             style={{

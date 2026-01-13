@@ -21,24 +21,30 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code (should include assets directory)
 COPY app/ ./app/
-# Explicitly copy assets directory to ensure it's included
-# Some build systems may not copy empty or non-Python directories
-COPY app/assets ./app/assets/
-# Verify assets file was copied (before switching to appuser)
-RUN if [ ! -f /app/app/assets/imagenet_class_index.json ]; then \
-        echo "ERROR: imagenet_class_index.json not found!"; \
-        echo "Contents of /app/app/:"; \
-        ls -la /app/app/ || true; \
-        echo "Looking for assets directory..."; \
-        find /app -name "assets" -type d 2>/dev/null || echo "No assets directory found"; \
-        echo "Looking for imagenet_class_index.json..."; \
+# Verify what was actually copied and check for assets file
+RUN echo "=== Verifying copied files ===" && \
+    echo "Contents of /app/app/:" && \
+    ls -la /app/app/ && \
+    echo "" && \
+    echo "Checking for assets directory:" && \
+    if [ -d /app/app/assets ]; then \
+        echo "✓ Assets directory exists"; \
+        ls -la /app/app/assets/ || true; \
+    else \
+        echo "✗ Assets directory NOT found"; \
+    fi && \
+    echo "" && \
+    echo "Checking for imagenet_class_index.json:" && \
+    if [ -f /app/app/assets/imagenet_class_index.json ]; then \
+        echo "✓ imagenet_class_index.json found"; \
+        ls -lh /app/app/assets/imagenet_class_index.json; \
+    else \
+        echo "✗ imagenet_class_index.json NOT found"; \
+        echo "Searching entire /app for the file:"; \
         find /app -name "imagenet_class_index.json" 2>/dev/null || echo "File not found anywhere"; \
         exit 1; \
-    else \
-        echo "✓ imagenet_class_index.json found at /app/app/assets/imagenet_class_index.json"; \
-        ls -lh /app/app/assets/imagenet_class_index.json; \
     fi
 COPY model_registry.yaml .
 

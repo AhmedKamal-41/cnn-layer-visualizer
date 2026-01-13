@@ -25,12 +25,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY model_registry.yaml .
 
+# Copy startup script
+COPY start.sh ./
+
 # Create storage directory with proper permissions
 RUN mkdir -p /app/storage && chmod 755 /app/storage
 
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    chmod +x /app/start.sh
 
 # Switch to non-root user
 USER appuser
@@ -42,7 +46,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD sh -c 'python -c "import os; import urllib.request; port = os.getenv(\"PORT\", \"8000\"); urllib.request.urlopen(f\"http://localhost:{port}/api/v1/health\")"'
 
-# Run uvicorn (uses PORT env var with fallback to 8000 for local dev)
-CMD sh -c 'uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'
-
+# Run uvicorn via startup script (uses PORT env var with fallback to 8000 for local dev)
+CMD ["./start.sh"]
 

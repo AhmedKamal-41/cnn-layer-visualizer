@@ -26,9 +26,30 @@ def _load_imagenet_class_names() -> Dict[int, str]:
     if _imagenet_class_names:
         return _imagenet_class_names
     
-    # Get the path to the assets directory relative to this file
+    # Try multiple possible paths to find the assets file
     current_file = Path(__file__)
-    assets_path = current_file.parent.parent / "assets" / "imagenet_class_index.json"
+    possible_paths = [
+        # Path relative to this file (most common case)
+        current_file.parent.parent / "assets" / "imagenet_class_index.json",
+        # Absolute path in container
+        Path("/app/app/assets/imagenet_class_index.json"),
+        # Alternative relative path
+        Path("/app/assets/imagenet_class_index.json"),
+    ]
+    
+    assets_path = None
+    for path in possible_paths:
+        if path.exists():
+            assets_path = path
+            break
+    
+    if assets_path is None:
+        logger.warning(
+            f"Failed to find ImageNet class names file. Tried paths: {possible_paths}. "
+            f"Using class_<id> format."
+        )
+        _imagenet_class_names = {}
+        return _imagenet_class_names
     
     try:
         with open(assets_path, "r") as f:
@@ -41,10 +62,10 @@ def _load_imagenet_class_names() -> Dict[int, str]:
             for class_id, class_data in class_index.items()
         }
         
-        logger.debug(f"Loaded {len(_imagenet_class_names)} ImageNet class names")
+        logger.debug(f"Loaded {len(_imagenet_class_names)} ImageNet class names from {assets_path}")
         
-    except (FileNotFoundError, json.JSONDecodeError, KeyError, IndexError) as e:
-        logger.warning(f"Failed to load ImageNet class names: {e}. Using class_{id} format.")
+    except (json.JSONDecodeError, KeyError, IndexError) as e:
+        logger.warning(f"Failed to parse ImageNet class names from {assets_path}: {e}. Using class_<id> format.")
         _imagenet_class_names = {}
     
     return _imagenet_class_names
@@ -311,44 +332,6 @@ def _compute_cam_from_activations_gradients(
     return cam_normalized
 
 
-# Cache for ImageNet class names
-_imagenet_class_names: Dict[int, str] = {}
-
-
-def _load_imagenet_class_names() -> Dict[int, str]:
-    """Load ImageNet class names from JSON file and cache them."""
-    global _imagenet_class_names
-    
-    if _imagenet_class_names:
-        return _imagenet_class_names
-    
-    import json
-    from pathlib import Path
-    
-    # Get the path to the assets directory relative to this file
-    current_file = Path(__file__)
-    assets_path = current_file.parent.parent / "assets" / "imagenet_class_index.json"
-    
-    try:
-        with open(assets_path, "r") as f:
-            class_index = json.load(f)
-        
-        # Convert to {class_id: class_name} mapping
-        # Format: {"0": ["n10000000", "tench"], "1": ["n10000001", "goldfish"], ...}
-        _imagenet_class_names = {
-            int(class_id): class_data[1]  # class_data[1] is the class name
-            for class_id, class_data in class_index.items()
-        }
-        
-        logger = logging.getLogger("app.inspect.gradcam")
-        logger.debug(f"Loaded {len(_imagenet_class_names)} ImageNet class names")
-        
-    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-        logger = logging.getLogger("app.inspect.gradcam")
-        logger.warning(f"Failed to load ImageNet class names: {e}. Using class_{id} format.")
-        _imagenet_class_names = {}
-    
-    return _imagenet_class_names
 
 
 def _get_imagenet_class_name(class_id: int) -> str:

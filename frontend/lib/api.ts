@@ -2,6 +2,28 @@
  * Backend API client using fetch()
  */
 
+// Get API base URL from environment or use relative path for local dev
+// Next.js replaces NEXT_PUBLIC_* variables at build time with their actual values
+declare const process: {
+  env: {
+    NEXT_PUBLIC_API_URL?: string
+  }
+}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ''
+
+// Helper function to build API URLs
+function getApiUrl(path: string): string {
+  if (API_BASE_URL) {
+    // Remove trailing slash from base URL if present
+    const base = API_BASE_URL.replace(/\/$/, '')
+    // Ensure path starts with /
+    const cleanPath = path.startsWith('/') ? path : `/${path}`
+    return `${base}${cleanPath}`
+  }
+  // Local dev: use relative path (will use Next.js rewrites)
+  return path
+}
+
 export interface CreateJobRequest {
   image: File
   model_id: string
@@ -50,7 +72,7 @@ export interface GradCAMInfo {
  * Get list of available models
  */
 export async function getModels(): Promise<Model[]> {
-  const response = await fetch('/api/v1/models')
+  const response = await fetch(getApiUrl('/api/v1/models'))
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
@@ -81,7 +103,7 @@ export async function createJob(
     formData.append('cam_layers', camLayers.join(','))
   }
 
-  const response = await fetch('/api/v1/jobs', {
+  const response = await fetch(getApiUrl('/api/v1/jobs'), {
     method: 'POST',
     body: formData,
   })
@@ -98,7 +120,7 @@ export async function createJob(
  * Get job status by job_id
  */
 export async function getJobStatus(jobId: string): Promise<JobResponse> {
-  const response = await fetch(`/api/v1/jobs/${jobId}`)
+  const response = await fetch(getApiUrl(`/api/v1/jobs/${jobId}`))
 
   if (!response.ok) {
     if (response.status === 404) {
@@ -115,7 +137,7 @@ export async function getJobStatus(jobId: string): Promise<JobResponse> {
  * Health check endpoint
  */
 export async function getHealth(): Promise<HealthResponse> {
-  const response = await fetch('/api/v1/health')
+  const response = await fetch(getApiUrl('/api/v1/health'))
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)

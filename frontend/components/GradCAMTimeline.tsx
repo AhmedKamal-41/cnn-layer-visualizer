@@ -1,6 +1,6 @@
 'use client'
 
-import { JobResponse, GradCAMInfo } from '@/lib/api'
+import { JobResponse, GradCAMInfo, getImageUrl } from '@/lib/api'
 import Image from 'next/image'
 
 interface GradCAMTimelineProps {
@@ -50,7 +50,7 @@ export default function GradCAMTimeline({ job, selectedStage }: GradCAMTimelineP
                 <>
                   <div className="relative w-32 h-32 bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200">
                     <Image
-                      src={overlay.url}
+                      src={getImageUrl(overlay.url)}
                       alt={`Grad-CAM for ${classInfo.class_name} at ${layerName}`}
                       fill
                       className="object-contain"

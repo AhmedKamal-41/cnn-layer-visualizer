@@ -1,7 +1,6 @@
 'use client'
 
 import { JobResponse, GradCAMInfo, getImageUrl } from '@/lib/api'
-import Image from 'next/image'
 
 interface GradCAMTimelineProps {
   job: JobResponse | null
@@ -48,13 +47,21 @@ export default function GradCAMTimeline({ job, selectedStage }: GradCAMTimelineP
             <div key={layerName} className="flex-shrink-0 text-center">
               {overlay ? (
                 <>
-                  <div className="relative w-32 h-32 bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                    <Image
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200 flex items-center justify-center">
+                    <img
                       src={getImageUrl(overlay.url)}
                       alt={`Grad-CAM for ${classInfo.class_name} at ${layerName}`}
-                      fill
-                      className="object-contain"
-                      sizes="128px"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                        if (target.parentElement) {
+                          const placeholder = document.createElement('div')
+                          placeholder.className = 'w-full h-full flex items-center justify-center text-gray-400 text-xs'
+                          placeholder.textContent = 'Failed to load'
+                          target.parentElement.appendChild(placeholder)
+                        }
+                      }}
                     />
                   </div>
                   <p className="mt-2 text-xs font-medium text-gray-700">{layerName}</p>

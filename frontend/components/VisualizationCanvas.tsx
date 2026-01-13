@@ -7,6 +7,13 @@ interface VisualizationCanvasProps {
   selectedStage: string | null
 }
 
+interface ChannelInfo {
+  channel: number
+  mean: number
+  max: number
+  image_url: string
+}
+
 export default function VisualizationCanvas({ job, selectedStage }: VisualizationCanvasProps) {
   // Find the selected layer data by stage (when status is 'succeeded', layers are at top level)
   const jobData = job as any
@@ -52,7 +59,7 @@ export default function VisualizationCanvas({ job, selectedStage }: Visualizatio
           <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-800">Top Feature Maps</h3>
             <div className="grid grid-cols-4 gap-4">
-              {selectedLayerData.top_channels.slice(0, 8).map((channel) => (
+              {selectedLayerData.top_channels.slice(0, 8).map((channel: ChannelInfo) => (
                 <div
                   key={channel.channel}
                   className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200"

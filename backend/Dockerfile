@@ -21,10 +21,8 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code (includes assets directory with imagenet_class_index.json)
 COPY app/ ./app/
-# Explicitly copy the ImageNet class index file to ensure it's included
-COPY app/assets/imagenet_class_index.json ./app/assets/imagenet_class_index.json
 COPY model_registry.yaml .
 
 # Copy startup script

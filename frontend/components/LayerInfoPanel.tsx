@@ -7,6 +7,12 @@ interface LayerInfoPanelProps {
   selectedStage: string | null
 }
 
+interface ChannelInfo {
+  channel: number
+  mean: number
+  max: number
+}
+
 export default function LayerInfoPanel({ job, selectedStage }: LayerInfoPanelProps) {
   // When status is 'succeeded', layers are at top level, not under result
   // Find layer by stage
@@ -89,7 +95,7 @@ export default function LayerInfoPanel({ job, selectedStage }: LayerInfoPanelPro
             </h3>
             <div className="bg-gray-50 rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
               <div className="divide-y divide-gray-200">
-                {selectedLayerData.top_channels.map((channel, index) => (
+                {selectedLayerData.top_channels.map((channel: ChannelInfo, index: number) => (
                   <div key={channel.channel} className="p-3 hover:bg-gray-100 transition-colors">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium text-gray-900">

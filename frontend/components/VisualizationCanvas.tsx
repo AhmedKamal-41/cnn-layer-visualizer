@@ -1,6 +1,6 @@
 'use client'
 
-import { JobResponse } from '@/lib/api'
+import { JobResponse, getImageUrl } from '@/lib/api'
 
 interface VisualizationCanvasProps {
   job: JobResponse
@@ -66,7 +66,7 @@ export default function VisualizationCanvas({ job, selectedStage }: Visualizatio
                 >
                   <div className="aspect-square bg-gray-100 flex items-center justify-center relative">
                     <img
-                      src={channel.image_url}
+                      src={getImageUrl(channel.image_url)}
                       alt={`Channel ${channel.channel}`}
                       className="w-full h-full object-contain"
                       onError={(e) => {

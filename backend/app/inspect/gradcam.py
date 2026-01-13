@@ -28,24 +28,45 @@ def _load_imagenet_class_names() -> Dict[int, str]:
     
     # Try multiple possible paths to find the assets file
     current_file = Path(__file__)
+    
+    # Build comprehensive list of possible paths
     possible_paths = [
         # Path relative to this file (most common case)
         current_file.parent.parent / "assets" / "imagenet_class_index.json",
-        # Absolute path in container
+        # Absolute paths in container
         Path("/app/app/assets/imagenet_class_index.json"),
-        # Alternative relative path
         Path("/app/assets/imagenet_class_index.json"),
+        # Try relative to app root (if running from different location)
+        Path(__file__).resolve().parent.parent.parent / "app" / "assets" / "imagenet_class_index.json",
     ]
     
-    assets_path = None
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_paths = []
     for path in possible_paths:
-        if path.exists():
-            assets_path = path
-            break
+        path_str = str(path)
+        if path_str not in seen:
+            seen.add(path_str)
+            unique_paths.append(path)
+    
+    assets_path = None
+    for path in unique_paths:
+        try:
+            if path.exists() and path.is_file():
+                assets_path = path
+                logger.debug(f"Found ImageNet class names file at: {assets_path}")
+                break
+        except Exception as e:
+            logger.debug(f"Error checking path {path}: {e}")
+            continue
     
     if assets_path is None:
+        # Log debug info about current file location
+        logger.debug(f"Current file location: {current_file}")
+        logger.debug(f"Current file absolute: {current_file.resolve()}")
+        logger.debug(f"Current working directory: {Path.cwd()}")
         logger.warning(
-            f"Failed to find ImageNet class names file. Tried paths: {possible_paths}. "
+            f"Failed to find ImageNet class names file. Tried {len(unique_paths)} unique paths. "
             f"Using class_<id> format."
         )
         _imagenet_class_names = {}

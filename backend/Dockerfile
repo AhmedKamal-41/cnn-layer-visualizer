@@ -24,7 +24,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code (includes assets directory with imagenet_class_index.json)
 COPY app/ ./app/
 # Verify assets file is copied (before switching to appuser)
-RUN test -f /app/app/assets/imagenet_class_index.json || (echo "ERROR: imagenet_class_index.json not found!" && ls -la /app/app/ && ls -la /app/app/assets/ 2>/dev/null || echo "Assets directory does not exist")
+# This will fail the build if the file is missing
+RUN if [ ! -f /app/app/assets/imagenet_class_index.json ]; then \
+        echo "ERROR: imagenet_class_index.json not found!"; \
+        echo "Contents of /app/app/:"; \
+        ls -la /app/app/ || true; \
+        echo "Contents of /app/app/assets/:"; \
+        ls -la /app/app/assets/ 2>/dev/null || echo "Assets directory does not exist"; \
+        exit 1; \
+    else \
+        echo "✓ imagenet_class_index.json found at /app/app/assets/imagenet_class_index.json"; \
+        ls -lh /app/app/assets/imagenet_class_index.json; \
+    fi
 COPY model_registry.yaml .
 
 # Copy startup script

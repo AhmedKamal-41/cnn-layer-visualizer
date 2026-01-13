@@ -1,4 +1,4 @@
-# Frontend Dockerfile for CNN Lens
+# Frontend Dockerfile for ConvLens
 # Multi-stage build for optimized production image
 
 # Stage 1: Build
@@ -44,16 +44,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Switch to non-root user
 USER nextjs
 
-# Expose port
+# Expose port (informational, Railway sets PORT at runtime)
 EXPOSE 3000
 
-ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# Note: PORT env var is set by Railway at runtime, Next.js standalone server.js reads it automatically
 
-# Health check
+# Health check (uses PORT env var with fallback to 3000)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+    CMD sh -c 'port=${PORT:-3000}; node -e "require(\"http\").get(`http://localhost:${port}`, (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"'
 
-# Run Next.js server
+# Run Next.js server (Next.js standalone reads process.env.PORT automatically)
 CMD ["node", "server.js"]
 

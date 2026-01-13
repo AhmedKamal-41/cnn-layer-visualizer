@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { JobResponse } from '@/lib/api'
+import { JobResponse, getImageUrl } from '@/lib/api'
 
 interface FeatureMapGridProps {
   job: JobResponse | null
@@ -144,7 +144,7 @@ export default function FeatureMapGrid({ job, selectedStage }: FeatureMapGridPro
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {channels.map((channel: any, index: number) => {
             const isLoading = imageLoading.has(index)
-            const imageUrl = channel.image_url
+            const imageUrl = getImageUrl(channel.image_url)
 
             return (
               <div
@@ -233,7 +233,7 @@ export default function FeatureMapGrid({ job, selectedStage }: FeatureMapGridPro
             {/* Image Container */}
             <div className="flex-1 flex items-center justify-center p-4 bg-gray-50 relative">
               <img
-                src={currentChannel.image_url}
+                src={getImageUrl(currentChannel.image_url)}
                 alt={`Channel ${currentChannel.channel} feature map`}
                 className="max-w-full max-h-[70vh] object-contain"
                 onError={(e) => {

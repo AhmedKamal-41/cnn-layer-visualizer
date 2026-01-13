@@ -12,14 +12,14 @@ def get_default_cam_layers(model_id: str) -> List[str]:
     """
     Get model-specific default CAM layers from the registry.
     
-    Reads from model_registry.yaml and returns the layers_to_hook list
-    (or a subset) as defaults for Grad-CAM computation.
+    Reads from model_registry.yaml and returns the last 2-3 layers from layers_to_hook
+    as defaults for Grad-CAM computation (optimized for speed - later layers are more informative).
     
     Args:
         model_id: Model identifier (e.g., "resnet18", "mobilenet_v2")
         
     Returns:
-        List of layer paths to use for Grad-CAM (e.g., ["conv1", "layer1", ...] or ["features.0", "features.2", ...])
+        List of layer paths to use for Grad-CAM (e.g., ["layer3", "layer4"] or ["features.13", "features.17"])
         Returns empty list if model config not found or layers_to_hook missing
     """
     model_config = get_model_config(model_id)
@@ -34,10 +34,22 @@ def get_default_cam_layers(model_id: str) -> List[str]:
         logger.warning(f"No layers_to_hook found in model config for {model_id}, returning empty CAM layers list")
         return []
     
-    # Return all layers from layers_to_hook as defaults
-    # This ensures we use model-specific paths (e.g., features.0 for MobileNetV2, conv1 for ResNet)
-    logger.debug(f"Using default CAM layers for {model_id}: {layers_to_hook}")
-    return layers_to_hook.copy()
+    # Return last 2-3 layers for efficiency (later layers are more informative for Grad-CAM)
+    # This reduces computation from 5 layers to 2-3 layers, significantly improving speed
+    # while still providing meaningful visualizations
+    num_layers = len(layers_to_hook)
+    if num_layers <= 2:
+        # If 2 or fewer layers, return all
+        default_layers = layers_to_hook.copy()
+    elif num_layers <= 4:
+        # If 3-4 layers, return last 2
+        default_layers = layers_to_hook[-2:].copy()
+    else:
+        # If 5+ layers, return last 3
+        default_layers = layers_to_hook[-3:].copy()
+    
+    logger.debug(f"Using optimized default CAM layers for {model_id}: {default_layers} (from {num_layers} total layers)")
+    return default_layers
 
 
 def get_cam_target_path(layer_name: str, model_id: str) -> str:

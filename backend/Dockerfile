@@ -23,8 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
-# Explicitly ensure assets directory is copied
-COPY app/assets/ ./app/assets/
+# Explicitly copy the ImageNet class index file to ensure it's included
+COPY app/assets/imagenet_class_index.json ./app/assets/imagenet_class_index.json
 COPY model_registry.yaml .
 
 # Copy startup script

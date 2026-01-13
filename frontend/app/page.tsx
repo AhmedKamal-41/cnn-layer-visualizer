@@ -14,6 +14,7 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [models, setModels] = useState<Model[]>([])
+  const [isLoadingModels, setIsLoadingModels] = useState(true)
 
   const featuresRef = useRef<HTMLDivElement>(null)
   const modelsRef = useRef<HTMLDivElement>(null)
@@ -22,11 +23,15 @@ export default function Home() {
 
   useEffect(() => {
     const fetchModels = async () => {
+      setIsLoadingModels(true)
       try {
         const modelsData = await getModels()
         setModels(modelsData)
       } catch (err) {
         console.error('Failed to fetch models:', err)
+        setError('Failed to load models. Please refresh the page.')
+      } finally {
+        setIsLoadingModels(false)
       }
     }
     fetchModels()
@@ -367,8 +372,18 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {models.map((model: Model) => {
+            {isLoadingModels ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading models...</p>
+              </div>
+            ) : models.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600">No models available. Please check your backend connection.</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {models.map((model: Model) => {
                 const info = modelInfo[model.id] || {
                   description: 'A powerful deep learning model for image classification.',
                   tags: ['Pre-trained', 'ImageNet']
@@ -410,7 +425,8 @@ export default function Home() {
                   </button>
                 )
               })}
-            </div>
+              </div>
+            )}
           </div>
         </section>
 

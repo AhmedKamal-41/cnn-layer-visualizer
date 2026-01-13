@@ -1,4 +1,4 @@
-# Backend Dockerfile for CNN Lens API
+# Backend Dockerfile for ConvLens API
 FROM python:3.11-slim
 
 # Set working directory
@@ -38,10 +38,10 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Health check
+# Health check (uses PORT env var with fallback to 8000)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"
+    CMD sh -c 'python -c "import os; import urllib.request; port = os.getenv(\"PORT\", \"8000\"); urllib.request.urlopen(f\"http://localhost:{port}/api/v1/health\")"'
 
-# Run uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run uvicorn (uses PORT env var with fallback to 8000 for local dev)
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
 

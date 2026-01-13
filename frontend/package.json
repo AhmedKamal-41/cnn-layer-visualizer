@@ -2,12 +2,12 @@
   "name": "cnn-lens-frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "CNN Lens Frontend - Next.js application for CNN visualization",
+  "description": "ConvLens Frontend - Next.js application for CNN visualization",
   "scripts": {
     "dev": "next dev",
     "dev:custom": "cross-env NEXT_PUBLIC_API_URL=http://localhost:8000 next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p ${PORT:-3000}",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },

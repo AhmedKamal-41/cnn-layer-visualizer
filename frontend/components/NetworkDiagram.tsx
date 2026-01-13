@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useMemo } from 'react'
 import { formatPrediction } from '@/lib/labels'
 import { useLabelMap } from '@/lib/useLabelMap'
+import { getImageUrl } from '@/lib/api'
 
 interface NetworkDiagramProps {
   layers: Array<{ name: string; stage: string | null; shape?: { c: number; h: number; w: number } }>
@@ -265,7 +266,7 @@ export default function NetworkDiagram({
                 {inputImageUrl ? (
                   <div className="flex-1 rounded overflow-hidden bg-gray-50">
                     <img
-                      src={inputImageUrl}
+                      src={getImageUrl(inputImageUrl)}
                       alt="Input image"
                       className="w-full h-full object-contain"
                       style={{ maxHeight: '120px' }}

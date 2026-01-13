@@ -7,7 +7,7 @@
     "dev": "next dev",
     "dev:custom": "cross-env NEXT_PUBLIC_API_URL=http://localhost:8000 next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
+    "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },

@@ -30,21 +30,41 @@ def _load_imagenet_class_names() -> Dict[int, str]:
     current_file = Path(__file__)
     
     # Build comprehensive list of possible paths
+    # Calculate base paths first to avoid duplicates
+    app_root_from_file = current_file.parent.parent  # /app/app from /app/app/inspect/gradcam.py
+    app_root_absolute = Path("/app/app")
+    app_root_alt = Path("/app")
+    
     possible_paths = [
         # Path relative to this file (most common case)
-        current_file.parent.parent / "assets" / "imagenet_class_index.json",
+        app_root_from_file / "assets" / "imagenet_class_index.json",
         # Absolute paths in container
-        Path("/app/app/assets/imagenet_class_index.json"),
-        Path("/app/assets/imagenet_class_index.json"),
-        # Try relative to app root (if running from different location)
-        Path(__file__).resolve().parent.parent.parent / "app" / "assets" / "imagenet_class_index.json",
+        app_root_absolute / "assets" / "imagenet_class_index.json",
+        app_root_alt / "assets" / "imagenet_class_index.json",
+        # Try using importlib to find package resources (if available)
     ]
+    
+    # Try using importlib.resources (Python 3.9+)
+    try:
+        import importlib.resources as pkg_resources
+        try:
+            # Try to access as package resource
+            assets_pkg = pkg_resources.files("app.assets")
+            json_file = assets_pkg / "imagenet_class_index.json"
+            if json_file.is_file():
+                possible_paths.insert(0, Path(str(json_file)))
+        except (ModuleNotFoundError, AttributeError, TypeError):
+            # Fallback for older Python or if not installed as package
+            pass
+    except ImportError:
+        pass
     
     # Remove duplicates while preserving order
     seen = set()
     unique_paths = []
     for path in possible_paths:
-        path_str = str(path)
+        path_resolved = path.resolve() if path.is_absolute() else path
+        path_str = str(path_resolved)
         if path_str not in seen:
             seen.add(path_str)
             unique_paths.append(path)
@@ -52,9 +72,10 @@ def _load_imagenet_class_names() -> Dict[int, str]:
     assets_path = None
     for path in unique_paths:
         try:
-            if path.exists() and path.is_file():
-                assets_path = path
-                logger.debug(f"Found ImageNet class names file at: {assets_path}")
+            resolved_path = path.resolve() if path.is_absolute() else path
+            if resolved_path.exists() and resolved_path.is_file():
+                assets_path = resolved_path
+                logger.info(f"Found ImageNet class names file at: {assets_path}")
                 break
         except Exception as e:
             logger.debug(f"Error checking path {path}: {e}")
@@ -65,6 +86,14 @@ def _load_imagenet_class_names() -> Dict[int, str]:
         logger.debug(f"Current file location: {current_file}")
         logger.debug(f"Current file absolute: {current_file.resolve()}")
         logger.debug(f"Current working directory: {Path.cwd()}")
+        logger.debug(f"App root from file: {app_root_from_file}")
+        logger.debug(f"App root absolute: {app_root_absolute}")
+        # Check if assets directory exists
+        for base in [app_root_from_file, app_root_absolute, app_root_alt]:
+            assets_dir = base / "assets"
+            logger.debug(f"Checking assets dir: {assets_dir} (exists: {assets_dir.exists()})")
+            if assets_dir.exists():
+                logger.debug(f"Contents of {assets_dir}: {list(assets_dir.iterdir()) if assets_dir.is_dir() else 'not a directory'}")
         logger.warning(
             f"Failed to find ImageNet class names file. Tried {len(unique_paths)} unique paths. "
             f"Using class_<id> format."

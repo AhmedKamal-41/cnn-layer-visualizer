@@ -21,10 +21,13 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code (includes assets directory with imagenet_class_index.json)
+# Copy application code
 COPY app/ ./app/
+# Explicitly ensure assets directory and file are copied
+# Create assets directory first, then copy the file
+RUN mkdir -p /app/app/assets
+COPY app/assets/imagenet_class_index.json ./app/assets/imagenet_class_index.json
 # Verify assets file is copied (before switching to appuser)
-# This will fail the build if the file is missing
 RUN if [ ! -f /app/app/assets/imagenet_class_index.json ]; then \
         echo "ERROR: imagenet_class_index.json not found!"; \
         echo "Contents of /app/app/:"; \

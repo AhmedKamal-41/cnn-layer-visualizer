@@ -264,13 +264,7 @@ export default function NetworkDiagram({
               <div className="border border-gray-200 rounded-lg shadow-sm bg-white p-4 h-full flex flex-col">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Input</h3>
                 {inputImageUrl ? (
-                  <div 
-                    className="flex-1 rounded overflow-hidden bg-gray-50 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => {
-                      const fullImageUrl = getImageUrl(inputImageUrl)
-                      window.open(fullImageUrl, '_blank')
-                    }}
-                  >
+                  <div className="flex-1 rounded overflow-hidden bg-gray-50">
                     <img
                       src={getImageUrl(inputImageUrl)}
                       alt="Input image"

@@ -37,6 +37,7 @@ def _get_model_mapping():
     """Get model_id to torchvision model loading function mapping."""
     return {
         "resnet18": lambda: torchvision.models.resnet18(weights="DEFAULT"),
+        "resnet34": lambda: torchvision.models.resnet34(weights="DEFAULT"),
         "resnet50": lambda: torchvision.models.resnet50(weights="DEFAULT"),
         "mobilenet_v2": lambda: torchvision.models.mobilenet_v2(weights="DEFAULT"),
         "mobilenet_v3_small": lambda: torchvision.models.mobilenet_v3_small(weights="DEFAULT"),

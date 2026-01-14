@@ -15,110 +15,70 @@ from app.inspect.hooks import get_layer_by_path
 
 logger = logging.getLogger("app.inspect.gradcam")
 
-# Cache for ImageNet class names
-_imagenet_class_names: Dict[int, str] = {}
+# Module-level cache and warning flag for ImageNet class names
+_IMAGENET_LABELS: dict[int, str] | None = None
+_IMAGENET_WARNED: bool = False
 
 
-def _load_imagenet_class_names() -> Dict[int, str]:
-    """Load ImageNet class names from JSON file and cache them."""
-    global _imagenet_class_names
+def get_imagenet_labels() -> dict[int, str]:
+    """
+    Load ImageNet class names from JSON file and cache them.
     
-    if _imagenet_class_names:
-        return _imagenet_class_names
+    Tries importlib.resources first, then falls back to filesystem paths.
+    Warns only once if the file cannot be found.
     
-    # Try multiple possible paths to find the assets file
-    current_file = Path(__file__)
+    Returns:
+        Dictionary mapping class_id (int) to class_name (str)
+    """
+    global _IMAGENET_LABELS, _IMAGENET_WARNED
     
-    # Build comprehensive list of possible paths
-    # Calculate base paths first to avoid duplicates
-    app_root_from_file = current_file.parent.parent  # /app/app from /app/app/inspect/gradcam.py
-    app_root_absolute = Path("/app/app")
-    app_root_alt = Path("/app")
+    # Return cached result if available
+    if _IMAGENET_LABELS is not None:
+        return _IMAGENET_LABELS
     
-    possible_paths = [
-        # Path relative to this file (most common case)
-        app_root_from_file / "assets" / "imagenet_class_index.json",
-        # Absolute paths in container
-        app_root_absolute / "assets" / "imagenet_class_index.json",
-        app_root_alt / "assets" / "imagenet_class_index.json",
-        # Try using importlib to find package resources (if available)
-    ]
-    
-    # Try using importlib.resources (Python 3.9+)
+    # Try importlib.resources first (preferred method)
     try:
-        import importlib.resources as pkg_resources
-        try:
-            # Try to access as package resource
-            assets_pkg = pkg_resources.files("app.assets")
-            json_file = assets_pkg / "imagenet_class_index.json"
-            if json_file.is_file():
-                possible_paths.insert(0, Path(str(json_file)))
-        except (ModuleNotFoundError, AttributeError, TypeError):
-            # Fallback for older Python or if not installed as package
-            pass
-    except ImportError:
-        pass
-    
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_paths = []
-    for path in possible_paths:
-        path_resolved = path.resolve() if path.is_absolute() else path
-        path_str = str(path_resolved)
-        if path_str not in seen:
-            seen.add(path_str)
-            unique_paths.append(path)
-    
-    assets_path = None
-    for path in unique_paths:
-        try:
-            resolved_path = path.resolve() if path.is_absolute() else path
-            if resolved_path.exists() and resolved_path.is_file():
-                assets_path = resolved_path
-                logger.info(f"Found ImageNet class names file at: {assets_path}")
-                break
-        except Exception as e:
-            logger.debug(f"Error checking path {path}: {e}")
-            continue
-    
-    if assets_path is None:
-        # Log debug info about current file location
-        logger.debug(f"Current file location: {current_file}")
-        logger.debug(f"Current file absolute: {current_file.resolve()}")
-        logger.debug(f"Current working directory: {Path.cwd()}")
-        logger.debug(f"App root from file: {app_root_from_file}")
-        logger.debug(f"App root absolute: {app_root_absolute}")
-        # Check if assets directory exists
-        for base in [app_root_from_file, app_root_absolute, app_root_alt]:
-            assets_dir = base / "assets"
-            logger.debug(f"Checking assets dir: {assets_dir} (exists: {assets_dir.exists()})")
-            if assets_dir.exists():
-                logger.debug(f"Contents of {assets_dir}: {list(assets_dir.iterdir()) if assets_dir.is_dir() else 'not a directory'}")
-        logger.warning(
-            f"Failed to find ImageNet class names file. Tried {len(unique_paths)} unique paths. "
-            f"Using class_<id> format."
-        )
-        _imagenet_class_names = {}
-        return _imagenet_class_names
-    
-    try:
-        with open(assets_path, "r") as f:
-            class_index = json.load(f)
-        
-        # Convert to {class_id: class_name} mapping
-        # Format: {"0": ["n10000000", "tench"], "1": ["n10000001", "goldfish"], ...}
-        _imagenet_class_names = {
+        from importlib import resources
+        data = resources.files("app.assets").joinpath("imagenet_class_index.json").read_text()
+        class_index = json.loads(data)
+        _IMAGENET_LABELS = {
             int(class_id): class_data[1]  # class_data[1] is the class name
             for class_id, class_data in class_index.items()
         }
-        
-        logger.debug(f"Loaded {len(_imagenet_class_names)} ImageNet class names from {assets_path}")
-        
-    except (json.JSONDecodeError, KeyError, IndexError) as e:
-        logger.warning(f"Failed to parse ImageNet class names from {assets_path}: {e}. Using class_<id> format.")
-        _imagenet_class_names = {}
+        logger.info(f"Loaded {len(_IMAGENET_LABELS)} ImageNet class names via importlib.resources")
+        return _IMAGENET_LABELS
+    except Exception as e:
+        logger.debug(f"importlib.resources failed: {e}")
     
-    return _imagenet_class_names
+    # Fallback to filesystem paths
+    candidates = [
+        Path(__file__).resolve().parents[1] / "assets" / "imagenet_class_index.json",
+        Path.cwd() / "app" / "assets" / "imagenet_class_index.json",
+        Path.cwd() / "backend" / "app" / "assets" / "imagenet_class_index.json",
+    ]
+    
+    for path in candidates:
+        if path.exists() and path.is_file():
+            try:
+                with open(path, "r") as f:
+                    class_index = json.load(f)
+                _IMAGENET_LABELS = {
+                    int(class_id): class_data[1]  # class_data[1] is the class name
+                    for class_id, class_data in class_index.items()
+                }
+                logger.info(f"Loaded {len(_IMAGENET_LABELS)} ImageNet class names from {path}")
+                return _IMAGENET_LABELS
+            except Exception as e:
+                logger.debug(f"Failed to load from {path}: {e}")
+                continue
+    
+    # File not found - warn only once
+    if not _IMAGENET_WARNED:
+        logger.warning("Failed to find ImageNet class names file. Using class_<id> format.")
+        _IMAGENET_WARNED = True
+    
+    _IMAGENET_LABELS = {}
+    return _IMAGENET_LABELS
 
 
 def generate_gradcam(
@@ -394,7 +354,7 @@ def _get_imagenet_class_name(class_id: int) -> str:
     Returns:
         Class name string (e.g., "golden retriever")
     """
-    class_names = _load_imagenet_class_names()
+    class_names = get_imagenet_labels()
     
     # Return actual class name if available, otherwise fall back to class_{id}
     return class_names.get(class_id, f"class_{class_id}")

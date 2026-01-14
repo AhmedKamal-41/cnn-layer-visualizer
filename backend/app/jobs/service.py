@@ -32,7 +32,7 @@ class JobService:
         """Initialize job service."""
         self._jobs: Dict[str, JobRecord] = {}
         self._job_data: Dict[str, bytes] = {}  # Store image_bytes for each job
-        self._job_params: Dict[str, Tuple[int, int, List[str]]] = {}  # Store (top_k_preds, top_k_cam, cam_layers) for each job
+        self._job_params: Dict[str, Tuple[int, int, str, int, List[str]]] = {}  # Store (top_k_preds, top_k_cam, cam_layer_mode, feature_map_limit, cam_layers) for each job
         self._job_queue: asyncio.Queue[str] = asyncio.Queue()
         self._lock: asyncio.Lock = asyncio.Lock()
         self._worker_task: Optional[asyncio.Task] = None
@@ -44,7 +44,9 @@ class JobService:
         image_bytes: bytes, 
         top_k_preds: int = 5, 
         top_k_cam: int = 1, 
-        cam_layers: Optional[List[str]] = None
+        cam_layers: Optional[List[str]] = None,
+        cam_layer_mode: str = "fast",
+        feature_map_limit: int = 16
     ) -> str:
         """
         Create a new inference job.
@@ -58,6 +60,8 @@ class JobService:
             top_k_preds: Number of prediction labels to return (default: 5)
             top_k_cam: Number of classes to generate Grad-CAM for (default: 1)
             cam_layers: List of layer names for Grad-CAM (default: None, uses default layers)
+            cam_layer_mode: Grad-CAM layer mode - "fast" (1 layer) or "full" (all layers) (default: "fast")
+            feature_map_limit: Number of feature maps to save per layer (default: 16)
             
         Returns:
             Job ID (UUID string)
@@ -75,7 +79,9 @@ class JobService:
                 model_id, 
                 top_k_preds=top_k_preds, 
                 top_k_cam=top_k_cam, 
-                cam_layers=cam_layers
+                cam_layers=cam_layers,
+                cam_layer_mode=cam_layer_mode,
+                feature_map_limit=feature_map_limit
             )
             cached_result = cache_service.get(cache_key)
             
@@ -110,7 +116,7 @@ class JobService:
             
             self._jobs[job_id] = job_record
             self._job_data[job_id] = image_bytes
-            self._job_params[job_id] = (top_k_preds, top_k_cam, cam_layers)
+            self._job_params[job_id] = (top_k_preds, top_k_cam, cam_layer_mode, feature_map_limit, cam_layers)
         
         await self._job_queue.put(job_id)
         
@@ -182,15 +188,34 @@ class JobService:
             
             # Get params (defaults if not found)
             if job_params:
-                top_k_preds, top_k_cam, cam_layers = job_params
+                top_k_preds, top_k_cam, cam_layer_mode, feature_map_limit, cam_layers = job_params
             else:
                 top_k_preds = 5
                 top_k_cam = 1
+                cam_layer_mode = "fast"
+                feature_map_limit = 16
                 # Use model-specific defaults from registry
                 cam_layers = get_default_cam_layers(model_id)
                 if not cam_layers:
                     logger.warning(f"No default CAM layers found for model '{model_id}', using empty list")
                     cam_layers = []
+            
+            # Store original cam_layers (from defaults or user input) for cache key
+            original_cam_layers = cam_layers.copy()
+            
+            # Determine actual CAM layers to use based on mode
+            if cam_layer_mode == "fast":
+                # Fast mode: use only first layer
+                cam_layers_to_use = [cam_layers[0]] if cam_layers else []
+            elif cam_layer_mode == "full":
+                # Full mode: use all layers (up to 5)
+                cam_layers_to_use = cam_layers[:5] if len(cam_layers) > 5 else cam_layers
+            else:
+                logger.warning(f"Unknown cam_layer_mode '{cam_layer_mode}', using 'fast' mode")
+                cam_layers_to_use = [cam_layers[0]] if cam_layers else []
+            
+            # Use filtered layers for Grad-CAM generation
+            cam_layers = cam_layers_to_use
             
             # Update status to RUNNING
             await self._update_job_progress(
@@ -293,7 +318,7 @@ class JobService:
                     job_id=job_id,
                     layer_name=layer_name,
                     storage_dir=storage_dir,
-                    top_k=32,
+                    top_k=feature_map_limit,
                 )
                 
                 # Convert to response format
@@ -398,6 +423,12 @@ class JobService:
                     "serialize_ms": serialize_time,
                     "total_ms": total_time,
                 },
+                meta={
+                    "top_k_preds": top_k_preds,
+                    "top_k_cam": top_k_cam,
+                    "cam_layer_mode": cam_layer_mode,
+                    "feature_map_limit": feature_map_limit,
+                },
             )
             
             # Update job with result and mark as SUCCEEDED
@@ -411,12 +442,15 @@ class JobService:
             
             # Store result in cache (if enabled)
             if settings.CACHE_ENABLED:
+                # Use original_cam_layers for cache key (before mode filtering)
                 cache_key = cache_service.compute_cache_key(
                     image_bytes, 
                     model_id, 
                     top_k_preds=top_k_preds, 
                     top_k_cam=top_k_cam, 
-                    cam_layers=cam_layers
+                    cam_layers=original_cam_layers,
+                    cam_layer_mode=cam_layer_mode,
+                    feature_map_limit=feature_map_limit
                 )
                 cache_service.set(cache_key, result)
                 logger.debug(f"Cached result for job {job_id}")

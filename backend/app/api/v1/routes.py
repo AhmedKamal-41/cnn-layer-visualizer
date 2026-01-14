@@ -42,7 +42,7 @@ async def create_job(
     Args:
         image: Image file to process
         model_id: Model identifier from registry
-        top_k: Number of top classes for Grad-CAM (default: 3, range: 1-5)
+        top_k: Number of top classes for Grad-CAM (default: 1, range: 1-5)
         cam_layers: Comma-separated layer names for Grad-CAM (default: "conv1,layer1,layer2,layer3,layer4")
         
     Returns:
@@ -77,7 +77,7 @@ async def create_job(
     
     # Parse and validate top_k
     if top_k is None:
-        top_k = 3
+        top_k = 1
     elif top_k < 1 or top_k > 5:
         raise HTTPException(status_code=400, detail="top_k must be between 1 and 5")
     

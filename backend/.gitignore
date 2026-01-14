@@ -34,6 +34,12 @@ ENV/
 storage/
 !storage/.gitkeep
 
+# PyTorch cache and model weights
+.torch/
+**/.torch/
+*.pth
+*.pt
+
 # IDE
 .vscode/
 .idea/

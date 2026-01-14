@@ -104,6 +104,22 @@ def get_model_config(model_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def get_all_model_ids() -> List[str]:
+    """
+    Get list of all model IDs from the registry.
+    
+    Returns:
+        List of model ID strings
+    """
+    try:
+        registry = _load_registry()
+        models = registry.get("models", [])
+        return [model.get("id") for model in models if model.get("id")]
+    except Exception as e:
+        logger.error(f"Error getting all model IDs: {e}")
+        return []
+
+
 def clear_cache() -> None:
     """Clear the registry cache (useful for testing or reloading)."""
     global _registry_cache

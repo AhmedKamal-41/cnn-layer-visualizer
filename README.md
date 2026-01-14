@@ -8,7 +8,7 @@
 
 ## Live Version
 
-🌐 **Live Demo**: [https://convlens.com](https://convlens.com)
+ **Live Demo**: [https://convlens.com](https://convlens.com)
 
 ## Overview
 
@@ -364,4 +364,5 @@ Smoke tests verify end-to-end functionality:
 cd backend
 python scripts/smoke_test.py
 ```
+
 

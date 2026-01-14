@@ -21,6 +21,25 @@ models:
       "layer3": "stage4"
       "layer4": "stage5"
 
+  - id: "resnet34"
+    display_name: "ResNet-34"
+    input_size: [224, 224]
+    normalization:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+    layers_to_hook:
+      - "conv1"
+      - "layer1"
+      - "layer2"
+      - "layer3"
+      - "layer4"
+    layer_stages:
+      "conv1": "stage1"
+      "layer1": "stage2"
+      "layer2": "stage3"
+      "layer3": "stage4"
+      "layer4": "stage5"
+
   - id: "resnet50"
     display_name: "ResNet-50"
     input_size: [224, 224]

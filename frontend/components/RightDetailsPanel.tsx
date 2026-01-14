@@ -10,10 +10,14 @@ interface RightDetailsPanelProps {
   selectedStage: string | null
   topKPreds: number
   topKCam: number
+  camLayerMode: 'fast' | 'full'
+  featureMapLimit: number
   camLayers: string[]
   availableLayers: string[]
   onTopKPredsChange: (k: number) => void
   onTopKCamChange: (k: number) => void
+  onCamLayerModeChange: (mode: 'fast' | 'full') => void
+  onFeatureMapLimitChange: (limit: number) => void
   onLayersChange: (layers: string[]) => void
   onApplySettings: () => void
 }
@@ -23,10 +27,14 @@ export default function RightDetailsPanel({
   selectedStage,
   topKPreds,
   topKCam,
+  camLayerMode,
+  featureMapLimit,
   camLayers,
   availableLayers,
   onTopKPredsChange,
   onTopKCamChange,
+  onCamLayerModeChange,
+  onFeatureMapLimitChange,
   onLayersChange,
   onApplySettings,
 }: RightDetailsPanelProps) {
@@ -290,15 +298,67 @@ export default function RightDetailsPanel({
                   <select
                     value={topKCam}
                     onChange={(e) => onTopKCamChange(parseInt(e.target.value, 10))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    disabled={topKPreds < topKCam}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    {[1, 3, 5].map((k) => (
+                    {[1, 3, 5].filter(k => k <= topKPreds).map((k) => (
                       <option key={k} value={k}>
                         {k}
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">Number of classes to generate Grad-CAM for</p>
+                  <p className="text-xs text-gray-500 mt-1">Number of classes to generate Grad-CAM for (must be ≤ Predictions)</p>
+                </div>
+
+                {/* Layers Mode Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Layers: {camLayerMode === 'fast' ? 'Fast (1 layer)' : 'Full (5 layers)'}
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onCamLayerModeChange('fast')}
+                      className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        camLayerMode === 'fast'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Fast
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onCamLayerModeChange('full')}
+                      className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        camLayerMode === 'full'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Full
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Fast = 1 layer (quicker), Full = 5 layers (more detailed)</p>
+                </div>
+
+                {/* Feature Maps Limit Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Feature maps: {featureMapLimit}
+                  </label>
+                  <select
+                    value={featureMapLimit}
+                    onChange={(e) => onFeatureMapLimitChange(parseInt(e.target.value, 10))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  >
+                    {[8, 16, 32].map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Number of feature maps to save per layer</p>
                 </div>
 
                 {/* CAM Layers Checkboxes */}

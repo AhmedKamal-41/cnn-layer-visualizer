@@ -203,16 +203,18 @@ class JobService:
                 original_image = original_image.convert("RGB")
             
             # Step 1: Load model (progress: 10%)
+            model_load_start = time.time()
             await self._update_job_progress(job_id, progress=10, message="Loading model")
             model = load_model(model_id)
-            logger.debug(f"Job {job_id}: Model loaded")
+            model_load_time = (time.time() - model_load_start) * 1000  # Convert to ms
+            logger.info(f"Job {job_id}: Model loaded ({model_load_time:.1f}ms)")
             
             # Step 2: Preprocess (progress: 20%)
             preprocess_start = time.time()
             await self._update_job_progress(job_id, progress=20, message="Preprocessing image")
             input_tensor = preprocess_image(image_bytes, model_id)
             preprocess_time = (time.time() - preprocess_start) * 1000  # Convert to ms
-            logger.debug(f"Job {job_id}: Image preprocessed")
+            logger.info(f"Job {job_id}: Image preprocessed ({preprocess_time:.1f}ms)")
             
             # Step 3: Forward pass (progress: 40%)
             forward_start = time.time()
@@ -230,9 +232,10 @@ class JobService:
             top_probs = top_probs.cpu().numpy()
             
             forward_time = (time.time() - forward_start) * 1000  # Convert to ms
-            logger.debug(f"Job {job_id}: Forward pass completed")
+            logger.info(f"Job {job_id}: Forward pass completed ({forward_time:.1f}ms)")
             
             # Step 4: Capture activations and generate feature maps (progress: 60%)
+            activation_start = time.time()
             await self._update_job_progress(job_id, progress=60, message="Extracting feature maps")
             
             # Get model config for layers to hook
@@ -246,11 +249,14 @@ class JobService:
             
             # Capture activations
             activations_dict = capture_activations(model, input_tensor, layer_paths)
+            activation_time = (time.time() - activation_start) * 1000  # Convert to ms
+            logger.info(f"Job {job_id}: Activations captured ({activation_time:.1f}ms)")
             
             # Get layer_stages mapping from model config
             layer_stages = model_config.get("layer_stages", {})
             
             # Generate feature maps for each layer
+            feature_map_start = time.time()
             layers_data = []
             for layer_name in layer_paths:
                 if layer_name not in activations_dict:
@@ -301,7 +307,8 @@ class JobService:
                     "cam_target_path": cam_target_path,
                 })
             
-            logger.debug(f"Job {job_id}: Feature maps extracted")
+            feature_map_time = (time.time() - feature_map_start) * 1000  # Convert to ms
+            logger.info(f"Job {job_id}: Feature maps extracted ({feature_map_time:.1f}ms)")
             
             # Step 5: Generate Grad-CAM (progress: 80%)
             serialize_start = time.time()
@@ -344,7 +351,7 @@ class JobService:
             ]
             
             serialize_time = (time.time() - serialize_start) * 1000  # Convert to ms
-            logger.debug(f"Job {job_id}: GradCAM visualizations generated")
+            logger.info(f"Job {job_id}: GradCAM visualizations generated ({serialize_time:.1f}ms)")
             
             # Build prediction info
             from app.inspect.gradcam import _get_imagenet_class_name
@@ -394,7 +401,7 @@ class JobService:
                 cache_service.set(cache_key, result)
                 logger.debug(f"Cached result for job {job_id}")
             
-            logger.info(f"Job {job_id} completed successfully")
+            logger.info(f"Job {job_id} completed successfully (total: {total_time:.1f}ms)")
             
         except Exception as e:
             # Handle errors and mark job as FAILED

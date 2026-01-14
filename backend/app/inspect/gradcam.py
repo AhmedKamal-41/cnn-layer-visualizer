@@ -2,6 +2,7 @@
 
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
@@ -514,11 +515,14 @@ def generate_gradcam_multilayer(
     cam_layers: List[str],
     job_id: str,
     storage_dir: Path,
-    top_k: int = 3,
+    top_k: int = 1,
     alpha: float = 0.45,
 ) -> Dict[str, Any]:
     """
     Generate Grad-CAM visualizations for top-K predicted classes across multiple layers.
+    
+    Optimized to use a single forward pass and one backward pass per class (instead of
+    one forward+backward per layer per class).
     
     Args:
         model: PyTorch model (should be in eval mode)
@@ -527,7 +531,7 @@ def generate_gradcam_multilayer(
         cam_layers: List of layer names for Grad-CAM computation (e.g., ["conv1", "layer1", "layer2"])
         job_id: Job identifier for directory structure
         storage_dir: Base storage directory (STORAGE_DIR from config)
-        top_k: Number of top classes to generate CAM for (default: 3)
+        top_k: Number of top classes to generate CAM for (default: 1)
         alpha: Overlay transparency (0.0 to 1.0, default 0.45)
         
     Returns:
@@ -546,101 +550,164 @@ def generate_gradcam_multilayer(
     # Ensure input tensor requires gradients
     input_tensor = input_tensor.clone().requires_grad_(True)
     
-    # Forward pass to get predictions
-    model.eval()
-    with torch.enable_grad():
-        output = model(input_tensor)
+    # Get layer modules for all target layers
+    layer_modules = {}
+    for layer_name in cam_layers:
+        try:
+            layer_modules[layer_name] = get_layer_by_path(model, layer_name)
+        except Exception as e:
+            logger.warning(f"Failed to get layer '{layer_name}': {e}")
+            continue
     
-    # Get probabilities
-    probs = F.softmax(output, dim=1)
+    if not layer_modules:
+        raise ValueError(f"No valid layers found in cam_layers: {cam_layers}")
     
-    # Get top-K classes
-    top_probs, top_indices = torch.topk(probs[0], k=min(top_k, probs.shape[1]))
-    top_indices = top_indices.detach().cpu().numpy()
-    top_probs = top_probs.detach().cpu().numpy()
+    # Storage for activations and gradients (one dict per layer)
+    activations_dict = {}
+    gradients_dict = {}
     
-    original_size = original_image.size  # (width, height)
-    classes_data = []
-    warnings = []
+    # Create hook functions that capture data for specific layers
+    def make_forward_hook(layer_name):
+        def hook(module, input, output):
+            activations_dict[layer_name] = output.detach()
+        return hook
     
-    # Process each top class
-    for class_id, prob in zip(top_indices, top_probs):
-        class_id_int = int(class_id)
-        class_name = _get_imagenet_class_name(class_id_int)
-        overlays = []
+    def make_backward_hook(layer_name):
+        def hook(module, grad_input, grad_output):
+            if grad_output is not None and len(grad_output) > 0:
+                gradients_dict[layer_name] = grad_output[0].detach()
+        return hook
+    
+    # Register hooks for all layers
+    handles = []
+    for layer_name, module in layer_modules.items():
+        handles.append(module.register_forward_hook(make_forward_hook(layer_name)))
+        handles.append(module.register_full_backward_hook(make_backward_hook(layer_name)))
+    
+    try:
+        # ONE forward pass to get predictions and capture activations for all layers
+        model.eval()
+        forward_start = time.time()
+        with torch.enable_grad():
+            output = model(input_tensor)
+        forward_time = (time.time() - forward_start) * 1000
         
-        # Process each layer for this class
-        for layer_name in cam_layers:
-            try:
-                # Compute CAM for this class and layer
-                activations, gradients = _compute_cam_for_class(
-                    model=model,
-                    input_tensor=input_tensor,
-                    target_layer=layer_name,
-                    class_id=class_id_int,
+        # Get probabilities and top-K classes
+        probs = F.softmax(output, dim=1)
+        top_probs, top_indices = torch.topk(probs[0], k=min(top_k, probs.shape[1]))
+        top_indices = top_indices.detach().cpu().numpy()
+        top_probs = top_probs.detach().cpu().numpy()
+        
+        original_size = original_image.size  # (width, height)
+        classes_data = []
+        warnings = []
+        
+        # Process each top class (default is top_k=1, so usually just one iteration)
+        for class_idx, (class_id, prob) in enumerate(zip(top_indices, top_probs)):
+            class_id_int = int(class_id)
+            class_name = _get_imagenet_class_name(class_id_int)
+            overlays = []
+            
+            # ONE backward pass for this class (captures gradients for all layers)
+            backward_start = time.time()
+            model.zero_grad()
+            # Use retain_graph=True if we have more classes to process (allows multiple backward passes)
+            retain_graph = (class_idx < len(top_indices) - 1)
+            output[0, class_id_int].backward(retain_graph=retain_graph)
+            backward_time = (time.time() - backward_start) * 1000
+            
+            # Post-processing start time
+            postprocess_start = time.time()
+            
+            # Process each layer using captured activations and gradients
+            for layer_name in cam_layers:
+                try:
+                    # Get captured activations and gradients for this layer
+                    if layer_name not in activations_dict:
+                        raise ValueError(f"Activations not captured for layer '{layer_name}'")
+                    if layer_name not in gradients_dict:
+                        raise ValueError(f"Gradients not captured for layer '{layer_name}'")
+                    
+                    activations = activations_dict[layer_name]
+                    gradients = gradients_dict[layer_name]
+                    
+                    # Compute CAM from activations and gradients
+                    cam_normalized = _compute_cam_from_activations_gradients(activations, gradients)
+                    
+                    # Convert to numpy
+                    cam_np = cam_normalized.detach().cpu().numpy()
+                    
+                    # Resize to match original image size
+                    cam_resized = np.array(Image.fromarray(cam_np).resize(original_size, Image.BILINEAR))
+                    
+                    # Generate colored heatmap for overlay
+                    heatmap_rgb = apply_colormap(cam_resized)
+                    
+                    # Overlay on original image
+                    original_array = np.array(original_image).astype(np.float32) / 255.0
+                    heatmap_array = heatmap_rgb.astype(np.float32) / 255.0
+                    
+                    # Alpha blending
+                    overlay_array = (1 - alpha) * original_array + alpha * heatmap_array
+                    overlay_array = np.clip(overlay_array * 255, 0, 255).astype(np.uint8)
+                    overlay_image = Image.fromarray(overlay_array, mode='RGB')
+                    
+                    # Create storage directory: STORAGE_DIR/{job_id}/gradcam/{class_id}/{layer_name}.png
+                    gradcam_dir = storage_dir / job_id / "gradcam" / str(class_id_int)
+                    gradcam_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Save overlay
+                    overlay_path = gradcam_dir / f"{layer_name}.png"
+                    overlay_image.save(overlay_path, format='PNG')
+                    
+                    # Compute relative path and URL
+                    overlay_relative = overlay_path.relative_to(storage_dir)
+                    overlay_str = str(overlay_relative).replace('\\', '/')
+                    overlay_url = f"/static/{overlay_str}"
+                    
+                    overlays.append({
+                        "layer": layer_name,
+                        "url": overlay_url,
+                    })
+                    
+                    logger.debug(f"Generated CAM for class {class_id_int} ({class_name}) at layer {layer_name}: prob={prob:.4f}")
+                    
+                except Exception as e:
+                    warning_msg = f"Failed to generate CAM for class {class_id_int} ({class_name}) at layer {layer_name}: {e}"
+                    logger.warning(warning_msg)
+                    warnings.append(warning_msg)
+                    continue
+            
+            postprocess_time = (time.time() - postprocess_start) * 1000
+            
+            classes_data.append({
+                "class_id": class_id_int,
+                "class_name": class_name,
+                "prob": float(prob),
+                "overlays": overlays,
+            })
+            
+            # Log timing for this class (only log for first class to avoid spam)
+            if class_idx == 0:
+                logger.info(
+                    f"Grad-CAM timing for class {class_id_int}: "
+                    f"forward={forward_time:.1f}ms, backward={backward_time:.1f}ms, "
+                    f"postprocess={postprocess_time:.1f}ms"
                 )
-                
-                # Compute CAM from activations and gradients
-                cam_normalized = _compute_cam_from_activations_gradients(activations, gradients)
-                
-                # Convert to numpy
-                cam_np = cam_normalized.detach().cpu().numpy()
-                
-                # Resize to match original image size
-                cam_resized = np.array(Image.fromarray(cam_np).resize(original_size, Image.BILINEAR))
-                
-                # Generate colored heatmap for overlay
-                heatmap_rgb = apply_colormap(cam_resized)
-                
-                # Overlay on original image
-                original_array = np.array(original_image).astype(np.float32) / 255.0
-                heatmap_array = heatmap_rgb.astype(np.float32) / 255.0
-                
-                # Alpha blending
-                overlay_array = (1 - alpha) * original_array + alpha * heatmap_array
-                overlay_array = np.clip(overlay_array * 255, 0, 255).astype(np.uint8)
-                overlay_image = Image.fromarray(overlay_array, mode='RGB')
-                
-                # Create storage directory: STORAGE_DIR/{job_id}/gradcam/{class_id}/{layer_name}.png
-                gradcam_dir = storage_dir / job_id / "gradcam" / str(class_id_int)
-                gradcam_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Save overlay
-                overlay_path = gradcam_dir / f"{layer_name}.png"
-                overlay_image.save(overlay_path, format='PNG')
-                
-                # Compute relative path and URL
-                overlay_relative = overlay_path.relative_to(storage_dir)
-                overlay_str = str(overlay_relative).replace('\\', '/')
-                overlay_url = f"/static/{overlay_str}"
-                
-                overlays.append({
-                    "layer": layer_name,
-                    "url": overlay_url,
-                })
-                
-                logger.debug(f"Generated CAM for class {class_id_int} ({class_name}) at layer {layer_name}: prob={prob:.4f}")
-                
-            except Exception as e:
-                warning_msg = f"Failed to generate CAM for class {class_id_int} ({class_name}) at layer {layer_name}: {e}"
-                logger.warning(warning_msg)
-                warnings.append(warning_msg)
-                continue
         
-        classes_data.append({
-            "class_id": class_id_int,
-            "class_name": class_name,
-            "prob": float(prob),
-            "overlays": overlays,
-        })
-    
-    result = {
-        "top_k": top_k,
-        "classes": classes_data,
-        "layers": cam_layers,
-        "warnings": warnings if warnings else None,
-    }
-    
-    logger.info(f"Generated multi-layer Grad-CAM for {len(classes_data)} classes across {len(cam_layers)} layers")
-    
-    return result
+        result = {
+            "top_k": top_k,
+            "classes": classes_data,
+            "layers": cam_layers,
+            "warnings": warnings if warnings else None,
+        }
+        
+        logger.info(f"Generated multi-layer Grad-CAM for {len(classes_data)} classes across {len(cam_layers)} layers")
+        
+        return result
+        
+    finally:
+        # Clean up hooks
+        for handle in handles:
+            handle.remove()
+        model.zero_grad()

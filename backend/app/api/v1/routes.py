@@ -37,6 +37,8 @@ async def create_job(
     top_k_preds: Optional[int] = Form(None),
     top_k_cam: Optional[int] = Form(None),
     cam_layers: Optional[str] = Form(None),
+    cam_layer_mode: Optional[str] = Form(None),
+    feature_map_limit: Optional[int] = Form(None),
 ):
     """
     Create a new inference job.
@@ -45,9 +47,11 @@ async def create_job(
         image: Image file to process
         model_id: Model identifier from registry
         top_k: Legacy parameter for backward compatibility (maps to both top_k_preds and top_k_cam)
-        top_k_preds: Number of prediction labels to return (default: 5, range: 1-5)
-        top_k_cam: Number of classes to generate Grad-CAM for (default: 1, range: 1-5)
-        cam_layers: Comma-separated layer names for Grad-CAM (default: "conv1,layer1,layer2,layer3,layer4")
+        top_k_preds: Number of prediction labels to return (default: 5, allowed: 1, 3, 5)
+        top_k_cam: Number of classes to generate Grad-CAM for (default: 1, allowed: 1, 3, 5, must be <= top_k_preds)
+        cam_layers: Comma-separated layer names for Grad-CAM (default: model-specific)
+        cam_layer_mode: Grad-CAM layer mode - "fast" (1 layer) or "full" (5 layers) (default: "fast")
+        feature_map_limit: Number of feature maps to save per layer (default: 16, allowed: 8, 16, 32)
         
     Returns:
         JobRecord with job_id and status
@@ -84,23 +88,42 @@ async def create_job(
         # New parameters provided - use them
         if top_k_preds is None:
             top_k_preds = 5
-        elif top_k_preds < 1 or top_k_preds > 5:
-            raise HTTPException(status_code=400, detail="top_k_preds must be between 1 and 5")
+        elif top_k_preds not in {1, 3, 5}:
+            raise HTTPException(status_code=400, detail="top_k_preds must be 1, 3, or 5")
         
         if top_k_cam is None:
             top_k_cam = 1
-        elif top_k_cam < 1 or top_k_cam > 5:
-            raise HTTPException(status_code=400, detail="top_k_cam must be between 1 and 5")
+        elif top_k_cam not in {1, 3, 5}:
+            raise HTTPException(status_code=400, detail="top_k_cam must be 1, 3, or 5")
     elif top_k is not None:
         # Legacy parameter provided - map to both
-        if top_k < 1 or top_k > 5:
-            raise HTTPException(status_code=400, detail="top_k must be between 1 and 5")
+        if top_k not in {1, 3, 5}:
+            raise HTTPException(status_code=400, detail="top_k must be 1, 3, or 5")
         top_k_preds = top_k
         top_k_cam = top_k
     else:
         # No parameters provided - use defaults
         top_k_preds = 5
         top_k_cam = 1
+    
+    # Validate top_k_cam <= top_k_preds
+    if top_k_cam > top_k_preds:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"top_k_cam ({top_k_cam}) must be <= top_k_preds ({top_k_preds})"
+        )
+    
+    # Parse and validate cam_layer_mode
+    if cam_layer_mode is None:
+        cam_layer_mode = "fast"
+    elif cam_layer_mode not in {"fast", "full"}:
+        raise HTTPException(status_code=400, detail='cam_layer_mode must be "fast" or "full"')
+    
+    # Parse and validate feature_map_limit
+    if feature_map_limit is None:
+        feature_map_limit = 16
+    elif feature_map_limit not in {8, 16, 32}:
+        raise HTTPException(status_code=400, detail="feature_map_limit must be 8, 16, or 32")
     
     # Parse and validate cam_layers
     if cam_layers is None:
@@ -119,7 +142,9 @@ async def create_job(
         image_bytes, 
         top_k_preds=top_k_preds, 
         top_k_cam=top_k_cam, 
-        cam_layers=cam_layers_list
+        cam_layers=cam_layers_list,
+        cam_layer_mode=cam_layer_mode,
+        feature_map_limit=feature_map_limit
     )
     
     # Return job record
@@ -281,6 +306,9 @@ async def get_job_status(job_id: str):
         total_ms=timings_data.get("total_ms", 0.0),
     )
     
+    # Get meta information from result
+    meta_data = result.meta if result.meta else None
+    
     # Build response
     response = JobResultResponse(
         job_id=job.job_id,
@@ -292,6 +320,7 @@ async def get_job_status(job_id: str):
         cams=cams_list,
         gradcam=gradcam_info,
         timings=timings,
+        meta=meta_data,
     )
     
     return response

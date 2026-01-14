@@ -18,11 +18,19 @@ logger = logging.getLogger("app.models.loaders")
 
 # In-memory LRU cache for loaded models (OrderedDict for LRU behavior)
 _model_cache: OrderedDict[str, torch.nn.Module] = OrderedDict()
-_model_cache_max = settings.MODEL_CACHE_MAX
 
-# Set TORCH_HOME if provided in settings
-if settings.TORCH_HOME is not None:
-    os.environ["TORCH_HOME"] = str(settings.TORCH_HOME)
+
+def _get_cache_max() -> int:
+    """Get MODEL_CACHE_MAX from settings at runtime (lazy getter)."""
+    from app.core.config import settings
+    return settings.MODEL_CACHE_MAX
+
+
+def remove_from_cache(model_id: str) -> None:
+    """Remove model from cache (used during preloading with download_only strategy)."""
+    global _model_cache
+    if model_id in _model_cache:
+        del _model_cache[model_id]
 
 
 def _get_model_mapping():
@@ -91,10 +99,11 @@ def load_model(model_id: str) -> torch.nn.Module:
     _model_cache.move_to_end(model_id)
     
     # Evict oldest if cache is full
-    if len(_model_cache) > _model_cache_max:
+    cache_max = _get_cache_max()
+    if len(_model_cache) > cache_max:
         oldest_key = next(iter(_model_cache))
         del _model_cache[oldest_key]
-        logger.debug(f"Evicted model from cache: {oldest_key} (cache size: {len(_model_cache)}/{_model_cache_max})")
+        logger.debug(f"Evicted model from cache: {oldest_key} (cache size: {len(_model_cache)}/{cache_max})")
     
     load_time = (time.time() - start_time) * 1000
     logger.info(f"Loaded and cached model: {model_id} ({load_time:.1f}ms)")
@@ -142,7 +151,8 @@ def preload_model(model_id: str) -> None:
         model.eval()
         
         # Add to cache if there's room, otherwise just discard (weights are cached to disk)
-        if len(_model_cache) < _model_cache_max:
+        cache_max = _get_cache_max()
+        if len(_model_cache) < cache_max:
             _model_cache[model_id] = model
             _model_cache.move_to_end(model_id)
             logger.info(f"Preloaded and cached model: {model_id}")

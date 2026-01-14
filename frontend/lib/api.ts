@@ -103,13 +103,24 @@ export async function createJob(
   image: File,
   modelId: string,
   topK?: number,
+  topKPreds?: number,
+  topKCam?: number,
   camLayers?: string[]
 ): Promise<JobResponse> {
   const formData = new FormData()
   formData.append('image', image)
   formData.append('model_id', modelId)
   
-  if (topK !== undefined) {
+  // New parameters: topKPreds and topKCam
+  if (topKPreds !== undefined || topKCam !== undefined) {
+    if (topKPreds !== undefined) {
+      formData.append('top_k_preds', topKPreds.toString())
+    }
+    if (topKCam !== undefined) {
+      formData.append('top_k_cam', topKCam.toString())
+    }
+  } else if (topK !== undefined) {
+    // Backward compatibility: if only topK provided, use it for both
     formData.append('top_k', topK.toString())
   }
   

@@ -11,3 +11,51 @@ Thumbs.db
 *.swo
 *~
 
+# Storage directories (generated artifacts)
+backend/storage/
+backend/app/storage/
+!backend/storage/.gitkeep
+!backend/app/storage/.gitkeep
+
+# Frontend build artifacts
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/.vercel/
+frontend/build/
+
+# Backend virtual environment
+backend/.venv/
+backend/venv/
+backend/env/
+backend/ENV/
+
+# PyTorch cache and model weights
+.torch/
+**/.torch/
+*.pth
+*.pt
+backend/**/*.pth
+backend/**/*.pt
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.Python
+build/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env*.local
+

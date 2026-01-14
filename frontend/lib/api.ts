@@ -105,7 +105,9 @@ export async function createJob(
   topK?: number,
   topKPreds?: number,
   topKCam?: number,
-  camLayers?: string[]
+  camLayers?: string[],
+  camLayerMode?: 'fast' | 'full',
+  featureMapLimit?: number
 ): Promise<JobResponse> {
   const formData = new FormData()
   formData.append('image', image)
@@ -126,6 +128,14 @@ export async function createJob(
   
   if (camLayers !== undefined && camLayers.length > 0) {
     formData.append('cam_layers', camLayers.join(','))
+  }
+  
+  if (camLayerMode !== undefined) {
+    formData.append('cam_layer_mode', camLayerMode)
+  }
+  
+  if (featureMapLimit !== undefined) {
+    formData.append('feature_map_limit', featureMapLimit.toString())
   }
 
   const response = await fetch(getApiUrl('/api/v1/jobs'), {

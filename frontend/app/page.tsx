@@ -15,6 +15,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [models, setModels] = useState<Model[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(true)
+  
+  // Quality/Speed settings
+  const [topKPreds, setTopKPreds] = useState(5)
+  const [topKCam, setTopKCam] = useState(1)
+  const [camLayerMode, setCamLayerMode] = useState<'fast' | 'full'>('fast')
+  const [featureMapLimit, setFeatureMapLimit] = useState(16)
 
   const featuresRef = useRef<HTMLDivElement>(null)
   const modelsRef = useRef<HTMLDivElement>(null)
@@ -47,7 +53,16 @@ export default function Home() {
     setError(null)
 
     try {
-      const jobResponse = await createJob(selectedFile, selectedModel)
+      const jobResponse = await createJob(
+        selectedFile, 
+        selectedModel,
+        undefined, // topK (legacy)
+        topKPreds,
+        topKCam,
+        undefined, // camLayers (use defaults)
+        camLayerMode,
+        featureMapLimit
+      )
       router.push(`/viewer/${jobResponse.job_id}`)
     } catch (err) {
       console.error('Failed to create job:', err)
@@ -443,6 +458,109 @@ export default function Home() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 md:p-8">
+              {/* Quality / Speed Settings Panel */}
+              <div className="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quality / Speed Settings</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Predictions to show */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Predictions to show: {topKPreds}
+                    </label>
+                    <select
+                      value={topKPreds}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10)
+                        setTopKPreds(val)
+                        // Ensure topKCam doesn't exceed topKPreds
+                        if (topKCam > val) {
+                          setTopKCam(val)
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    >
+                      {[1, 3, 5].map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Number of prediction labels to display</p>
+                  </div>
+
+                  {/* Grad-CAM classes */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Grad-CAM classes: {topKCam}
+                    </label>
+                    <select
+                      value={topKCam}
+                      onChange={(e) => setTopKCam(parseInt(e.target.value, 10))}
+                      disabled={topKPreds < topKCam}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      {[1, 3, 5].filter(k => k <= topKPreds).map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Number of classes to generate Grad-CAM for (must be ≤ Predictions)</p>
+                  </div>
+
+                  {/* Layers mode */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Layers: {camLayerMode === 'fast' ? 'Fast (1 layer)' : 'Full (5 layers)'}
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCamLayerMode('fast')}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                          camLayerMode === 'fast'
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        Fast
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCamLayerMode('full')}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                          camLayerMode === 'full'
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        Full
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Fast = 1 layer (quicker), Full = 5 layers (more detailed)</p>
+                  </div>
+
+                  {/* Feature maps */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Feature maps: {featureMapLimit}
+                    </label>
+                    <select
+                      value={featureMapLimit}
+                      onChange={(e) => setFeatureMapLimit(parseInt(e.target.value, 10))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    >
+                      {[8, 16, 32].map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Number of feature maps to save per layer</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-8 items-start">
                 {/* Left: Upload */}
                 <div>

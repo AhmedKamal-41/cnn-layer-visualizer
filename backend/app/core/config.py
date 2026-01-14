@@ -28,9 +28,10 @@ class Settings(BaseSettings):
     CACHE_MAX_ITEMS: int = 100
     
     # Model Configuration
-    PRELOAD_MODELS: Optional[str] = None  # "all" or comma-separated list of model IDs
+    PRELOAD_MODELS: str = ""  # "" = none, "all" = all models, else comma-separated list
+    PRELOAD_STRATEGY: str = "download_only"  # "download_only" or "load_into_ram"
     MODEL_CACHE_MAX: int = 3  # Maximum number of models to keep in memory (LRU cache)
-    TORCH_HOME: Optional[Path] = None  # PyTorch cache directory (uses TORCH_HOME env var if set)
+    TORCH_HOME: Path = Path("/data/.torch")  # PyTorch cache directory (uses TORCH_HOME env var if set)
     
     # Upload Configuration
     MAX_UPLOAD_SIZE_MB: int = 10
@@ -75,14 +76,21 @@ class Settings(BaseSettings):
     
     @field_validator("TORCH_HOME", mode="after")
     @classmethod
-    def resolve_torch_home(cls, v: Optional[Path]) -> Optional[Path]:
-        """Resolve TORCH_HOME to absolute path if provided."""
-        if v is None:
-            return None
+    def resolve_torch_home(cls, v: Path) -> Path:
+        """Resolve TORCH_HOME to absolute path."""
         if not v.is_absolute():
             v = v.resolve()
         else:
             v = v.resolve()
+        return v
+    
+    @field_validator("PRELOAD_STRATEGY", mode="before")
+    @classmethod
+    def validate_preload_strategy(cls, v: str) -> str:
+        """Validate PRELOAD_STRATEGY is one of allowed values."""
+        allowed = {"download_only", "load_into_ram"}
+        if v not in allowed:
+            raise ValueError(f"PRELOAD_STRATEGY must be one of {allowed}, got: {v}")
         return v
     
     @field_validator("MODEL_CACHE_MAX", mode="after")

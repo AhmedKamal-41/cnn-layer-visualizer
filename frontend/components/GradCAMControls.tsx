@@ -3,20 +3,24 @@
 import { useState } from 'react'
 
 interface GradCAMControlsProps {
-  topK: number
+  topKPreds: number
+  topKCam: number
   camLayers: string[]
   availableLayers: string[]
-  onTopKChange: (k: number) => void
+  onTopKPredsChange: (k: number) => void
+  onTopKCamChange: (k: number) => void
   onLayersChange: (layers: string[]) => void
   onApply: () => void
   disabled?: boolean
 }
 
 export default function GradCAMControls({
-  topK,
+  topKPreds,
+  topKCam,
   camLayers,
   availableLayers,
-  onTopKChange,
+  onTopKPredsChange,
+  onTopKCamChange,
   onLayersChange,
   onApply,
   disabled = false,
@@ -34,23 +38,44 @@ export default function GradCAMControls({
       <h3 className="text-sm font-semibold mb-3 text-gray-700">Grad-CAM Settings</h3>
       
       <div className="space-y-4">
-        {/* Top-K selector */}
+        {/* Predictions to Show selector */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Top-K Classes: {topK}
+            Predictions to show: {topKPreds}
           </label>
           <select
-            value={topK}
-            onChange={(e) => onTopKChange(parseInt(e.target.value, 10))}
+            value={topKPreds}
+            onChange={(e) => onTopKPredsChange(parseInt(e.target.value, 10))}
             disabled={disabled}
             className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
-            {[1, 2, 3, 4, 5].map((k) => (
+            {[1, 3, 5].map((k) => (
               <option key={k} value={k}>
                 {k}
               </option>
             ))}
           </select>
+          <p className="text-xs text-gray-500 mt-1">Number of prediction labels to display</p>
+        </div>
+
+        {/* Grad-CAM Classes selector */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Grad-CAM classes: {topKCam}
+          </label>
+          <select
+            value={topKCam}
+            onChange={(e) => onTopKCamChange(parseInt(e.target.value, 10))}
+            disabled={disabled}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          >
+            {[1, 3, 5].map((k) => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">Number of classes to generate Grad-CAM for</p>
         </div>
         
         {/* Layer checkboxes */}

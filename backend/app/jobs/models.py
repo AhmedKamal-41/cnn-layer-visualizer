@@ -23,7 +23,6 @@ class JobResult(BaseModel):
     layers_metadata: List[Dict[str, Any]] = Field(default_factory=list, description="Metadata for each layer")
     assets_manifest: Dict[str, Any] = Field(default_factory=dict, description="URLs/paths to generated assets")
     timings: Dict[str, float] = Field(default_factory=dict, description="Timing information for different operations")
-    meta: Optional[Dict[str, Any]] = Field(default=None, description="Job settings metadata (top_k_preds, top_k_cam, cam_layer_mode, feature_map_limit)")
 
 
 # New schema models for API response
@@ -123,7 +122,6 @@ class JobResultResponse(BaseModel):
     cams: List[CAMInfo]
     gradcam: Optional[GradCAMInfo] = Field(default=None, description="Multi-layer Grad-CAM information")
     timings: TimingsInfo
-    meta: Optional[Dict[str, Any]] = Field(default=None, description="Job settings metadata (top_k_preds, top_k_cam, cam_layer_mode, feature_map_limit)")
 
 
 class JobRecord(BaseModel):

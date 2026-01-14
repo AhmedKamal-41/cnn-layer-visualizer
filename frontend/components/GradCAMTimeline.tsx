@@ -47,7 +47,7 @@ export default function GradCAMTimeline({ job, selectedStage }: GradCAMTimelineP
             <div key={layerName} className="flex-shrink-0 text-center">
               {overlay ? (
                 <>
-                  <div className="w-64 h-64 bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200 flex items-center justify-center">
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200 flex items-center justify-center">
                     <img
                       src={getImageUrl(overlay.url)}
                       alt={`Grad-CAM for ${classInfo.class_name} at ${layerName}`}
@@ -64,11 +64,11 @@ export default function GradCAMTimeline({ job, selectedStage }: GradCAMTimelineP
                       }}
                     />
                   </div>
-                  <p className="mt-2 text-sm font-medium text-gray-700">{layerName}</p>
+                  <p className="mt-2 text-xs font-medium text-gray-700">{layerName}</p>
                 </>
               ) : (
-                <div className="w-64 h-64 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
-                  <p className="text-sm text-gray-400">N/A</p>
+                <div className="w-32 h-32 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
+                  <p className="text-xs text-gray-400">N/A</p>
                 </div>
               )}
             </div>

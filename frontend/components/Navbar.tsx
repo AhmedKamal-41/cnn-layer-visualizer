@@ -47,7 +47,7 @@ export default function Navbar({
                 <circle cx="16" cy="20" r="1.5" fill="currentColor" className="text-indigo-600" />
                 <circle cx="20" cy="20" r="1.5" fill="currentColor" className="text-indigo-600" />
               </svg>
-              <span className="text-xl font-bold text-gray-900">CNN Lens</span>
+              <span className="text-xl font-bold text-gray-900">convLens</span>
             </button>
           </div>
 

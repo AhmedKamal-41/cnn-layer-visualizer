@@ -1,6 +1,10 @@
-# ConvLens
-
-A full-stack web application for visualizing and analyzing Convolutional Neural Network (CNN) layer activations, feature maps, and Grad-CAM heatmaps. ConvLens provides an interactive platform for deep learning interpretability, enabling researchers and practitioners to understand how CNNs process and extract features from images.
+<div align="center">
+  <img src="logo.svg" alt="convLens Logo" width="120" />
+  
+  # ConvLens
+  
+  A full-stack web application for visualizing and analyzing Convolutional Neural Network (CNN) layer activations, feature maps, and Grad-CAM heatmaps.
+</div>
 
 ## Live Version
 

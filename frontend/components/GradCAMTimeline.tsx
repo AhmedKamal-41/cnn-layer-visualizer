@@ -54,14 +54,14 @@ export default function GradCAMTimeline({ job, selectedStage }: GradCAMTimelineP
       <div className="flex items-center gap-4 overflow-x-auto pb-2">
         {gradcam.layers.map((layerName) => {
           const overlay = classInfo.overlays.find((o) => o.layer === layerName)
-          const imageUrl = overlay ? getImageUrl(overlay.url) : null
+          const imageUrl = overlay ? getImageUrl(overlay.url) : undefined
           return (
             <div key={layerName} className="flex-shrink-0 text-center">
-              {overlay ? (
+              {overlay && imageUrl ? (
                 <>
                   <div 
                     className="w-48 h-48 bg-gray-100 rounded-lg overflow-hidden shadow-sm border border-gray-200 flex items-center justify-center cursor-pointer hover:shadow-md hover:border-blue-400 transition-all"
-                    onClick={() => imageUrl && handleImageClick(imageUrl)}
+                    onClick={() => handleImageClick(imageUrl)}
                   >
                     <img
                       src={imageUrl}

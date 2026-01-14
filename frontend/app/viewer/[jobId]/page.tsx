@@ -120,8 +120,6 @@ function ViewerPageContent() {
   const router = useRouter()
   const [topKPreds, setTopKPreds] = useState(5)
   const [topKCam, setTopKCam] = useState(1)
-  const [camLayerMode, setCamLayerMode] = useState<'fast' | 'full'>('fast')
-  const [featureMapLimit, setFeatureMapLimit] = useState(16)
   const [camLayers, setCamLayers] = useState<string[]>(['conv1', 'layer1', 'layer2', 'layer3', 'layer4'])
 
   // Navigate to next/previous stage
@@ -370,20 +368,10 @@ function ViewerPageContent() {
             selectedStage={selectedLayer}
             topKPreds={topKPreds}
             topKCam={topKCam}
-            camLayerMode={camLayerMode}
-            featureMapLimit={featureMapLimit}
             camLayers={camLayers}
             availableLayers={jobData.gradcam?.layers || ['conv1', 'layer1', 'layer2', 'layer3', 'layer4']}
-            onTopKPredsChange={(val) => {
-              setTopKPreds(val)
-              // Ensure topKCam doesn't exceed topKPreds
-              if (topKCam > val) {
-                setTopKCam(val)
-              }
-            }}
+            onTopKPredsChange={setTopKPreds}
             onTopKCamChange={setTopKCam}
-            onCamLayerModeChange={setCamLayerMode}
-            onFeatureMapLimitChange={setFeatureMapLimit}
             onLayersChange={setCamLayers}
             onApplySettings={async () => {
               try {
@@ -391,16 +379,7 @@ function ViewerPageContent() {
                 if (!inputImageUrl) return
                 
                 const imageFile = await urlToFile(inputImageUrl)
-                const newJob = await createJob(
-                  imageFile, 
-                  job.model_id, 
-                  undefined, 
-                  topKPreds, 
-                  topKCam, 
-                  camLayers,
-                  camLayerMode,
-                  featureMapLimit
-                )
+                const newJob = await createJob(imageFile, job.model_id, undefined, topKPreds, topKCam, camLayers)
                 router.push(`/viewer/${newJob.job_id}`)
               } catch (err) {
                 console.error('Failed to re-run job:', err)

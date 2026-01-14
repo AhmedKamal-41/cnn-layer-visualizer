@@ -1,10 +1,14 @@
-# CNN Lens
+# ConvLens
 
-A full-stack web application for visualizing and analyzing Convolutional Neural Network (CNN) layer activations, feature maps, and Grad-CAM heatmaps. CNN Lens provides an interactive platform for deep learning interpretability, enabling researchers and practitioners to understand how CNNs process and extract features from images.
+A full-stack web application for visualizing and analyzing Convolutional Neural Network (CNN) layer activations, feature maps, and Grad-CAM heatmaps. ConvLens provides an interactive platform for deep learning interpretability, enabling researchers and practitioners to understand how CNNs process and extract features from images.
+
+## Live Version
+
+🌐 **Live Demo**: [https://convlens.com](https://convlens.com)
 
 ## Overview
 
-CNN Lens combines modern web technologies with PyTorch-based deep learning inference to deliver real-time visualization of CNN internal representations. The platform supports multiple pre-trained architectures from torchvision, including ResNet, MobileNet, EfficientNet, DenseNet, ConvNeXt, and ShuffleNet variants.
+ConvLens combines modern web technologies with PyTorch-based deep learning inference to deliver real-time visualization of CNN internal representations. The platform supports multiple pre-trained architectures from torchvision, including ResNet, MobileNet, EfficientNet, DenseNet, ConvNeXt, and ShuffleNet variants.
 
 ### Key Features
 
@@ -47,7 +51,7 @@ All models are pre-trained on ImageNet and loaded with default weights from torc
 
 ### System Architecture
 
-CNN Lens follows a microservices architecture with clear separation between frontend and backend services:
+ConvLens follows a microservices architecture with clear separation between frontend and backend services:
 
 - **Backend Service**: FastAPI-based REST API providing inference endpoints, job management, and asset storage
 - **Frontend Service**: Next.js application with React components for user interaction and visualization
@@ -286,6 +290,31 @@ docker-compose up -d
 - Frontend service exposes port 3000
 - Storage directory is mounted as volume for persistence
 - Services communicate via internal Docker network
+
+### Railway (No Docker) Deploy
+
+Deploy both services using Railway's native builders:
+
+**FRONTEND Service:**
+- Build Command: `npm ci && npm run build`
+- Start Command: `npm run start -- -p $PORT`
+- Root Directory: `frontend`
+- Environment Variables:
+
+
+**BACKEND Service:**
+- Build Command: `pip install -r requirements.txt`
+- Start Command: `sh start.sh` (use `sh` to avoid permission issues)
+- Root Directory: `backend`
+- Environment Variables:
+
+  - `PORT` (automatically set by Railway, fallback to 8000)
+
+**Notes:**
+- Ensure both services are deployed as separate Railway services
+- Frontend service should reference backend service URL in `NEXT_PUBLIC_API_URL`
+- Backend start command uses `sh start.sh` to avoid execute permission issues
+- Storage directory will be ephemeral unless using Railway volumes
 
 ### Production Considerations
 

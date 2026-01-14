@@ -30,10 +30,12 @@ class CacheService:
         model_id: str, 
         top_k_preds: int = 5, 
         top_k_cam: int = 1, 
-        cam_layers: Optional[List[str]] = None
+        cam_layers: Optional[List[str]] = None,
+        cam_layer_mode: str = "fast",
+        feature_map_limit: int = 16
     ) -> str:
         """
-        Compute SHA256 hash of image bytes + model_id + top_k_preds + top_k_cam + cam_layers.
+        Compute SHA256 hash of image bytes + model_id + settings.
         
         Args:
             image_bytes: Raw image bytes
@@ -41,9 +43,11 @@ class CacheService:
             top_k_preds: Number of prediction labels to return (default: 5)
             top_k_cam: Number of classes to generate Grad-CAM for (default: 1)
             cam_layers: List of layer names for Grad-CAM (default: None, uses default layers)
+            cam_layer_mode: Grad-CAM layer mode - "fast" or "full" (default: "fast")
+            feature_map_limit: Number of feature maps to save per layer (default: 16)
             
         Returns:
-            Hex digest of cache key (SHA256 of image_bytes + model_id + top_k_preds + top_k_cam + sorted cam_layers)
+            Hex digest of cache key (SHA256 of image_bytes + model_id + all settings)
         """
         # Default cam_layers if None
         if cam_layers is None:
@@ -53,13 +57,15 @@ class CacheService:
         sorted_layers = sorted(cam_layers)
         layers_str = ",".join(sorted_layers)
         
-        # Combine image_bytes + model_id + top_k_preds + top_k_cam + layers (encoded to bytes)
+        # Combine image_bytes + model_id + all settings (encoded to bytes)
         combined = (
             image_bytes + 
             model_id.encode('utf-8') + 
             str(top_k_preds).encode('utf-8') + 
             str(top_k_cam).encode('utf-8') + 
-            layers_str.encode('utf-8')
+            layers_str.encode('utf-8') +
+            cam_layer_mode.encode('utf-8') +
+            str(feature_map_limit).encode('utf-8')
         )
         return hashlib.sha256(combined).hexdigest()
     

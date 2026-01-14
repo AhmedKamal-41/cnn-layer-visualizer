@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.svg" alt="convLens Logo" width="120" />
+  <img src="frontend\app\icon.svg" alt="convLens Logo" width="120" />
   
   # ConvLens
   
@@ -364,3 +364,4 @@ Smoke tests verify end-to-end functionality:
 cd backend
 python scripts/smoke_test.py
 ```
+

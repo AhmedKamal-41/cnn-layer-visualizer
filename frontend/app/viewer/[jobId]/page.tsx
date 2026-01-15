@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getJobStatus, JobResponse, createJob } from '@/lib/api'
+import { getJobStatus, JobResponse, createJob, getImageUrl } from '@/lib/api'
 import JobStatusBanner from '@/components/JobStatusBanner'
-import NetworkGraph from '@/components/NetworkGraph'
+import NetworkDiagram from '@/components/NetworkDiagram'
 import LayerPicker from '@/components/LayerPicker'
 import LayerExplainer from '@/components/LayerExplainer'
 import FeatureMapGrid from '@/components/FeatureMapGrid'
@@ -24,6 +24,17 @@ export default function ViewerPage() {
   const [topK, setTopK] = useState(1)
   const [camLayers, setCamLayers] = useState<string[]>([])
   const [availableLayers, setAvailableLayers] = useState<string[]>([])
+  const [isPlaying, setIsPlaying] = useState(false)
+  const playIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current)
+      }
+    }
+  }, [])
 
   // Fetch job status
   useEffect(() => {
@@ -34,14 +45,10 @@ export default function ViewerPage() {
         const jobData = await getJobStatus(jobId)
         setJob(jobData)
 
-        // Set initial selected stage if job is succeeded
-        if (jobData.status === 'succeeded' && !selectedStage) {
+        // Set available layers for CAM (but don't auto-select a layer)
+        if (jobData.status === 'succeeded') {
           const jobDataAny = jobData as any
           const layers = jobDataAny.layers || []
-          if (layers.length > 0) {
-            setSelectedStage(layers[0].stage || null)
-          }
-          // Set available layers for CAM
           if (layers.length > 0) {
             setAvailableLayers(layers.map((l: any) => l.name).filter(Boolean))
             // Set default CAM layers (first 5 or all if less than 5)
@@ -159,14 +166,26 @@ export default function ViewerPage() {
           {/* Job Status Banner */}
           <JobStatusBanner job={job} />
 
-          {/* Top Section - Network Graph */}
+          {/* Top Section - Network Diagram */}
           {job.status === 'succeeded' && (
             <div className="bg-white border-b">
-              <NetworkGraph
-                job={job}
-                selectedStage={selectedStage}
-                onStageSelect={setSelectedStage}
-              />
+              {(() => {
+                const jobData = job as any
+                const layers = jobData.layers || []
+                const topPrediction = jobData.prediction?.topk?.[0]
+                const inputImageUrl = jobData.input?.image_url
+                
+                return (
+                  <NetworkDiagram
+                    layers={layers}
+                    selectedStage={selectedStage}
+                    onLayerSelect={setSelectedStage}
+                    inputImageUrl={inputImageUrl ? getImageUrl(inputImageUrl) : undefined}
+                    predictionLabel={topPrediction?.class_name}
+                    predictionProb={topPrediction?.prob}
+                  />
+                )
+              })()}
               <div className="px-6 pb-4">
                 <p className="text-sm text-gray-600 text-center">
                   Click a layer to see what the CNN learns at that stage.
@@ -185,27 +204,63 @@ export default function ViewerPage() {
                   <div className="p-4 border-b">
                     <button
                       onClick={() => {
-                        // Auto-play through layers
-                        let currentIndex = 0
-                        const playInterval = setInterval(() => {
-                          if (currentIndex < layers.length) {
-                            setSelectedStage(layers[currentIndex].stage || null)
-                            currentIndex++
-                          } else {
-                            clearInterval(playInterval)
+                        if (isPlaying) {
+                          // Stop playing
+                          if (playIntervalRef.current) {
+                            clearInterval(playIntervalRef.current)
+                            playIntervalRef.current = null
                           }
-                        }, 2000)
+                          setIsPlaying(false)
+                        } else {
+                          // Start playing
+                          setIsPlaying(true)
+                          let currentIndex = layers.findIndex((l: any) => l.stage === selectedStage)
+                          if (currentIndex === -1) currentIndex = 0
+                          
+                          const interval = setInterval(() => {
+                            if (currentIndex < layers.length) {
+                              setSelectedStage(layers[currentIndex].stage || null)
+                              currentIndex++
+                            } else {
+                              clearInterval(interval)
+                              playIntervalRef.current = null
+                              setIsPlaying(false)
+                            }
+                          }, 2000)
+                          
+                          // Store interval in ref for cleanup
+                          playIntervalRef.current = interval
+                        }
                       }}
-                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                      className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                        isPlaying
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                      </svg>
-                      Play
+                      {isPlaying ? (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M5.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75A.75.75 0 007.25 3h-1.5zM12.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-1.5z" />
+                          </svg>
+                          Stop
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                          </svg>
+                          Play
+                        </>
+                      )}
                     </button>
                   </div>
 

@@ -32,20 +32,13 @@ class JobService:
         """Initialize job service."""
         self._jobs: Dict[str, JobRecord] = {}
         self._job_data: Dict[str, bytes] = {}  # Store image_bytes for each job
-        self._job_params: Dict[str, Tuple[int, int, List[str]]] = {}  # Store (top_k_preds, top_k_cam, cam_layers) for each job
+        self._job_params: Dict[str, Tuple[int, List[str]]] = {}  # Store (top_k, cam_layers) for each job
         self._job_queue: asyncio.Queue[str] = asyncio.Queue()
         self._lock: asyncio.Lock = asyncio.Lock()
         self._worker_task: Optional[asyncio.Task] = None
         self._worker_running: bool = False
     
-    async def create_job(
-        self, 
-        model_id: str, 
-        image_bytes: bytes, 
-        top_k_preds: int = 5, 
-        top_k_cam: int = 1, 
-        cam_layers: Optional[List[str]] = None
-    ) -> str:
+    async def create_job(self, model_id: str, image_bytes: bytes, top_k: int = 3, cam_layers: Optional[List[str]] = None) -> str:
         """
         Create a new inference job.
         
@@ -55,8 +48,7 @@ class JobService:
         Args:
             model_id: Model identifier from registry
             image_bytes: Image file bytes
-            top_k_preds: Number of prediction labels to return (default: 5)
-            top_k_cam: Number of classes to generate Grad-CAM for (default: 1)
+            top_k: Number of top classes for Grad-CAM (default: 3)
             cam_layers: List of layer names for Grad-CAM (default: None, uses default layers)
             
         Returns:
@@ -70,13 +62,7 @@ class JobService:
         
         # Check cache first (if enabled)
         if settings.CACHE_ENABLED:
-            cache_key = cache_service.compute_cache_key(
-                image_bytes, 
-                model_id, 
-                top_k_preds=top_k_preds, 
-                top_k_cam=top_k_cam, 
-                cam_layers=cam_layers
-            )
+            cache_key = cache_service.compute_cache_key(image_bytes, model_id, top_k=top_k, cam_layers=cam_layers)
             cached_result = cache_service.get(cache_key)
             
             if cached_result is not None:
@@ -110,7 +96,7 @@ class JobService:
             
             self._jobs[job_id] = job_record
             self._job_data[job_id] = image_bytes
-            self._job_params[job_id] = (top_k_preds, top_k_cam, cam_layers)
+            self._job_params[job_id] = (top_k, cam_layers)
         
         await self._job_queue.put(job_id)
         
@@ -182,10 +168,9 @@ class JobService:
             
             # Get params (defaults if not found)
             if job_params:
-                top_k_preds, top_k_cam, cam_layers = job_params
+                top_k, cam_layers = job_params
             else:
-                top_k_preds = 5
-                top_k_cam = 1
+                top_k = 3
                 # Use model-specific defaults from registry
                 cam_layers = get_default_cam_layers(model_id)
                 if not cam_layers:
@@ -239,9 +224,10 @@ class JobService:
             with torch.no_grad():
                 output = model(input_tensor)
             
-            # Get top-K predictions using top_k_preds
+            # Get top-K predictions (use top_k from job_params, but get at least top-5 for prediction display)
             probs = F.softmax(output, dim=1)
-            top_probs, top_indices = torch.topk(probs[0], k=min(top_k_preds, probs.shape[1]))
+            prediction_top_k = max(top_k, 5)  # Get at least top-5 predictions for display
+            top_probs, top_indices = torch.topk(probs[0], k=min(prediction_top_k, probs.shape[1]))
             top_indices = top_indices.cpu().numpy()
             top_probs = top_probs.cpu().numpy()
             
@@ -328,7 +314,7 @@ class JobService:
             serialize_start = time.time()
             await self._update_job_progress(job_id, progress=80, message="Generating GradCAM visualizations")
             
-            # Generate multi-layer Grad-CAM using top_k_cam
+            # Generate multi-layer Grad-CAM
             gradcam_data = generate_gradcam_multilayer(
                 model=model,
                 input_tensor=input_tensor,
@@ -336,7 +322,7 @@ class JobService:
                 cam_layers=cam_layers,
                 job_id=job_id,
                 storage_dir=storage_dir,
-                top_k=top_k_cam,
+                top_k=top_k,
                 alpha=0.45,
             )
             
@@ -349,7 +335,7 @@ class JobService:
                 target_layer=target_layer,
                 job_id=job_id,
                 storage_dir=storage_dir,
-                top_k=top_k_cam,
+                top_k=top_k,
                 alpha=0.45,
             )
             
@@ -411,13 +397,7 @@ class JobService:
             
             # Store result in cache (if enabled)
             if settings.CACHE_ENABLED:
-                cache_key = cache_service.compute_cache_key(
-                    image_bytes, 
-                    model_id, 
-                    top_k_preds=top_k_preds, 
-                    top_k_cam=top_k_cam, 
-                    cam_layers=cam_layers
-                )
+                cache_key = cache_service.compute_cache_key(image_bytes, model_id)
                 cache_service.set(cache_key, result)
                 logger.debug(f"Cached result for job {job_id}")
             

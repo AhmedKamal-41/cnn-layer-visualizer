@@ -311,3 +311,4 @@ async def get_model(model_id: str):
     if model_config is None:
         raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found")
     return model_config
+

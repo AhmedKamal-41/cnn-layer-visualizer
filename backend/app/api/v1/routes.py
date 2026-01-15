@@ -34,8 +34,6 @@ async def create_job(
     image: UploadFile = File(...),
     model_id: str = Form(...),
     top_k: Optional[int] = Form(None),
-    top_k_preds: Optional[int] = Form(None),
-    top_k_cam: Optional[int] = Form(None),
     cam_layers: Optional[str] = Form(None),
 ):
     """
@@ -44,9 +42,7 @@ async def create_job(
     Args:
         image: Image file to process
         model_id: Model identifier from registry
-        top_k: Legacy parameter for backward compatibility (maps to both top_k_preds and top_k_cam)
-        top_k_preds: Number of prediction labels to return (default: 5, range: 1-5)
-        top_k_cam: Number of classes to generate Grad-CAM for (default: 1, range: 1-5)
+        top_k: Number of top classes for Grad-CAM (default: 1, range: 1-5)
         cam_layers: Comma-separated layer names for Grad-CAM (default: "conv1,layer1,layer2,layer3,layer4")
         
     Returns:
@@ -79,28 +75,11 @@ async def create_job(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading image file: {str(e)}")
     
-    # Parse and validate top_k_preds and top_k_cam with backward compatibility
-    if top_k_preds is not None or top_k_cam is not None:
-        # New parameters provided - use them
-        if top_k_preds is None:
-            top_k_preds = 5
-        elif top_k_preds < 1 or top_k_preds > 5:
-            raise HTTPException(status_code=400, detail="top_k_preds must be between 1 and 5")
-        
-        if top_k_cam is None:
-            top_k_cam = 1
-        elif top_k_cam < 1 or top_k_cam > 5:
-            raise HTTPException(status_code=400, detail="top_k_cam must be between 1 and 5")
-    elif top_k is not None:
-        # Legacy parameter provided - map to both
-        if top_k < 1 or top_k > 5:
-            raise HTTPException(status_code=400, detail="top_k must be between 1 and 5")
-        top_k_preds = top_k
-        top_k_cam = top_k
-    else:
-        # No parameters provided - use defaults
-        top_k_preds = 5
-        top_k_cam = 1
+    # Parse and validate top_k
+    if top_k is None:
+        top_k = 1
+    elif top_k < 1 or top_k > 5:
+        raise HTTPException(status_code=400, detail="top_k must be between 1 and 5")
     
     # Parse and validate cam_layers
     if cam_layers is None:
@@ -114,13 +93,7 @@ async def create_job(
             raise HTTPException(status_code=400, detail="cam_layers must contain at least one layer")
     
     # Create job
-    job_id = await job_service.create_job(
-        model_id, 
-        image_bytes, 
-        top_k_preds=top_k_preds, 
-        top_k_cam=top_k_cam, 
-        cam_layers=cam_layers_list
-    )
+    job_id = await job_service.create_job(model_id, image_bytes, top_k=top_k, cam_layers=cam_layers_list)
     
     # Return job record
     job = await job_service.get_job(job_id)

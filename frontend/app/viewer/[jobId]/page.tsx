@@ -118,8 +118,7 @@ function ViewerPageContent() {
   
   // Grad-CAM settings state
   const router = useRouter()
-  const [topKPreds, setTopKPreds] = useState(5)
-  const [topKCam, setTopKCam] = useState(1)
+  const [topK, setTopK] = useState(3)
   const [camLayers, setCamLayers] = useState<string[]>(['conv1', 'layer1', 'layer2', 'layer3', 'layer4'])
 
   // Navigate to next/previous stage
@@ -366,12 +365,10 @@ function ViewerPageContent() {
           <RightDetailsPanel
             job={job}
             selectedStage={selectedLayer}
-            topKPreds={topKPreds}
-            topKCam={topKCam}
+            topK={topK}
             camLayers={camLayers}
             availableLayers={jobData.gradcam?.layers || ['conv1', 'layer1', 'layer2', 'layer3', 'layer4']}
-            onTopKPredsChange={setTopKPreds}
-            onTopKCamChange={setTopKCam}
+            onTopKChange={setTopK}
             onLayersChange={setCamLayers}
             onApplySettings={async () => {
               try {
@@ -379,7 +376,7 @@ function ViewerPageContent() {
                 if (!inputImageUrl) return
                 
                 const imageFile = await urlToFile(inputImageUrl)
-                const newJob = await createJob(imageFile, job.model_id, undefined, topKPreds, topKCam, camLayers)
+                const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
                 router.push(`/viewer/${newJob.job_id}`)
               } catch (err) {
                 console.error('Failed to re-run job:', err)

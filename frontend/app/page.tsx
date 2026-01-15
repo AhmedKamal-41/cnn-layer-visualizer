@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation'
 import UploadDropzone from '@/components/UploadDropzone'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import LoadingOverlay from '@/components/LoadingOverlay'
 import { createJob, getModels, Model } from '@/lib/api'
+import { useProgress } from '@/hooks/useProgress'
+import { useRotatingMessage } from '@/hooks/useRotatingMessage'
 
 export default function Home() {
   const router = useRouter()
@@ -15,6 +18,18 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [models, setModels] = useState<Model[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingError, setLoadingError] = useState<string | null>(null)
+  
+  // Progress hook - only enabled when isLoading is true
+  const { progress: loadingProgress, setProgress: setLoadingProgress, resetProgress: resetLoadingProgress } = useProgress({
+    enabled: isLoading && !loadingError,
+  })
+  
+  // Rotating message hook - only enabled when isLoading is true
+  const currentMessage = useRotatingMessage({
+    enabled: isLoading && !loadingError,
+  })
 
   const featuresRef = useRef<HTMLDivElement>(null)
   const modelsRef = useRef<HTMLDivElement>(null)
@@ -45,15 +60,43 @@ export default function Home() {
 
     setIsSubmitting(true)
     setError(null)
+    setIsLoading(true)
+    setLoadingError(null)
+    resetLoadingProgress()
 
     try {
       const jobResponse = await createJob(selectedFile, selectedModel)
-      router.push(`/viewer/${jobResponse.job_id}`)
+      
+      // Set progress to 100% on success
+      setLoadingProgress(100)
+      
+      // Wait 300ms then close overlay and navigate
+      setTimeout(() => {
+        setIsLoading(false)
+        setIsSubmitting(false)
+        router.push(`/viewer/${jobResponse.job_id}`)
+      }, 300)
     } catch (err) {
       console.error('Failed to create job:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create job. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create job. Please try again.'
+      setError(errorMessage)
+      setLoadingError(errorMessage)
       setIsSubmitting(false)
+      // Keep overlay open to show error
     }
+  }
+
+  const handleRetry = () => {
+    setLoadingError(null)
+    resetLoadingProgress()
+    handleAnalyze()
+  }
+
+  const handleCancelLoading = () => {
+    setIsLoading(false)
+    setLoadingError(null)
+    setIsSubmitting(false)
+    resetLoadingProgress()
   }
 
   const scrollToFeatures = () => {
@@ -100,6 +143,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
+      <LoadingOverlay
+        isOpen={isLoading}
+        progress={loadingProgress}
+        title="Analyzing your image"
+        message={currentMessage}
+        error={loadingError}
+        onRetry={handleRetry}
+        onCancel={handleCancelLoading}
+      />
       <Navbar
         onScrollToFeatures={scrollToFeatures}
         onScrollToModels={scrollToModels}

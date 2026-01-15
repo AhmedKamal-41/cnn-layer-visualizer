@@ -208,7 +208,12 @@ export default function NetworkDiagram({
 
   const handleColumnClick = (layer: typeof layers[0]) => {
     if (layer.stage) {
-      onLayerSelect(layer.stage)
+      // Toggle: if clicking on already selected layer, deselect it
+      if (selectedStage === layer.stage) {
+        onLayerSelect(null)
+      } else {
+        onLayerSelect(layer.stage)
+      }
     }
   }
 

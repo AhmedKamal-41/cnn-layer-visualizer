@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getJobStatus, JobResponse, createJob, getImageUrl } from '@/lib/api'
-import JobStatusBanner from '@/components/JobStatusBanner'
+import { getJobStatus, JobResponse, getImageUrl } from '@/lib/api'
 import NetworkDiagram from '@/components/NetworkDiagram'
 import LayerPicker from '@/components/LayerPicker'
 import LayerExplainer from '@/components/LayerExplainer'
@@ -21,9 +20,6 @@ export default function ViewerPage() {
   const [job, setJob] = useState<JobResponse | null>(null)
   const [selectedStage, setSelectedStage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [topK, setTopK] = useState(1)
-  const [camLayers, setCamLayers] = useState<string[]>([])
-  const [availableLayers, setAvailableLayers] = useState<string[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -45,19 +41,6 @@ export default function ViewerPage() {
         const jobData = await getJobStatus(jobId)
         setJob(jobData)
 
-        // Set available layers for CAM (but don't auto-select a layer)
-        if (jobData.status === 'succeeded') {
-          const jobDataAny = jobData as any
-          const layers = jobDataAny.layers || []
-          if (layers.length > 0) {
-            setAvailableLayers(layers.map((l: any) => l.name).filter(Boolean))
-            // Set default CAM layers (first 5 or all if less than 5)
-            const defaultCamLayers = layers.slice(0, 5).map((l: any) => l.name).filter(Boolean)
-            if (defaultCamLayers.length > 0) {
-              setCamLayers(defaultCamLayers)
-            }
-          }
-        }
       } catch (err) {
         console.error('Failed to fetch job:', err)
         setError(err instanceof Error ? err.message : 'Failed to load job')
@@ -78,31 +61,6 @@ export default function ViewerPage() {
     return () => clearInterval(interval)
   }, [jobId, job?.status, selectedStage])
 
-  const handleApplySettings = async () => {
-    if (!job || job.status !== 'succeeded') return
-
-    const jobData = job as any
-    const imageUrl = jobData.input?.image_url
-
-    if (!imageUrl || !job.model_id) {
-      setError('Cannot create new job: missing image or model information')
-      return
-    }
-
-    try {
-      // Fetch the original image
-      const response = await fetch(imageUrl.startsWith('http') ? imageUrl : `/${imageUrl}`)
-      const blob = await response.blob()
-      const imageFile = new File([blob], 'image.jpg', { type: 'image/jpeg' })
-
-      // Create new job with updated settings
-      const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
-      router.push(`/viewer/${newJob.job_id}`)
-    } catch (err) {
-      console.error('Failed to create new job:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create new job')
-    }
-  }
 
   if (error) {
     return (
@@ -346,17 +304,11 @@ export default function ViewerPage() {
               )}
             </div>
 
-            {/* Right Sidebar - Details & Controls */}
+            {/* Right Sidebar - Details */}
             {job.status === 'succeeded' && (
               <RightDetailsPanel
                 job={job}
                 selectedStage={selectedStage}
-                topK={topK}
-                camLayers={camLayers}
-                availableLayers={availableLayers}
-                onTopKChange={setTopK}
-                onLayersChange={setCamLayers}
-                onApplySettings={handleApplySettings}
               />
             )}
           </div>

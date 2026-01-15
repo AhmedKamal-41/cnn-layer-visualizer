@@ -141,11 +141,6 @@ export default function ViewerPage() {
                   />
                 )
               })()}
-              <div className="px-6 pb-4">
-                <p className="text-sm text-gray-600 text-center">
-                  Click a layer to see what the CNN learns at that stage.
-                </p>
-              </div>
             </div>
           )}
 

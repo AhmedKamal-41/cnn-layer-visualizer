@@ -2,17 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getJobStatus, JobResponse, getImageUrl } from '@/lib/api'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+import { getJobStatus, JobResponse, createJob } from '@/lib/api'
 import JobStatusBanner from '@/components/JobStatusBanner'
+import NetworkGraph from '@/components/NetworkGraph'
 import LayerPicker from '@/components/LayerPicker'
-import VisualizationCanvas from '@/components/VisualizationCanvas'
+import LayerExplainer from '@/components/LayerExplainer'
 import FeatureMapGrid from '@/components/FeatureMapGrid'
 import GradCAMTimeline from '@/components/GradCAMTimeline'
-import HeatmapOverlay from '@/components/HeatmapOverlay'
 import RightDetailsPanel from '@/components/RightDetailsPanel'
-import NetworkDiagram from '@/components/NetworkDiagram'
+import Navbar from '@/components/Navbar'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
 export default function ViewerPage() {
@@ -22,244 +20,302 @@ export default function ViewerPage() {
 
   const [job, setJob] = useState<JobResponse | null>(null)
   const [selectedStage, setSelectedStage] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [topK, setTopK] = useState(1)
   const [camLayers, setCamLayers] = useState<string[]>([])
   const [availableLayers, setAvailableLayers] = useState<string[]>([])
 
-  // Polling interval in milliseconds
-  const POLL_INTERVAL = 2000 // 2 seconds
-
   // Fetch job status
-  const fetchJobStatus = async () => {
+  useEffect(() => {
     if (!jobId) return
 
-    try {
-      const jobData = await getJobStatus(jobId)
-      setJob(jobData)
-      setError(null)
+    const fetchJob = async () => {
+      try {
+        const jobData = await getJobStatus(jobId)
+        setJob(jobData)
 
-      // Extract available layers from job data
-      if (jobData.status === 'succeeded' && jobData.result?.layers) {
-        const layers = jobData.result.layers.map((l: any) => l.stage).filter(Boolean)
-        setAvailableLayers(layers)
-
-        // Set default selected stage to first layer if none selected
-        if (!selectedStage && layers.length > 0) {
-          setSelectedStage(layers[0])
-        }
-
-        // Set default CAM layers if not set
-        if (camLayers.length === 0 && layers.length > 0) {
-          // Get default layers from gradcam data or use first 5 layers
-          const gradcamData = jobData.result?.gradcam
-          if (gradcamData?.layers) {
-            setCamLayers(gradcamData.layers)
-          } else {
-            setCamLayers(layers.slice(0, 5))
+        // Set initial selected stage if job is succeeded
+        if (jobData.status === 'succeeded' && !selectedStage) {
+          const jobDataAny = jobData as any
+          const layers = jobDataAny.layers || []
+          if (layers.length > 0) {
+            setSelectedStage(layers[0].stage || null)
+          }
+          // Set available layers for CAM
+          if (layers.length > 0) {
+            setAvailableLayers(layers.map((l: any) => l.name).filter(Boolean))
+            // Set default CAM layers (first 5 or all if less than 5)
+            const defaultCamLayers = layers.slice(0, 5).map((l: any) => l.name).filter(Boolean)
+            if (defaultCamLayers.length > 0) {
+              setCamLayers(defaultCamLayers)
+            }
           }
         }
+      } catch (err) {
+        console.error('Failed to fetch job:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load job')
       }
-    } catch (err) {
-      console.error('Failed to fetch job status:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load job')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Initial fetch
-  useEffect(() => {
-    if (!jobId) {
-      setError('Job ID is required')
-      setIsLoading(false)
-      return
     }
 
-    fetchJobStatus()
-  }, [jobId])
+    fetchJob()
 
-  // Poll for updates if job is still processing
-  useEffect(() => {
-    if (!job || job.status === 'succeeded' || job.status === 'failed') {
-      return
-    }
-
+    // Poll job status if job is queued or running
     const interval = setInterval(() => {
-      fetchJobStatus()
-    }, POLL_INTERVAL)
+      if (job?.status === 'queued' || job?.status === 'running') {
+        fetchJob()
+      } else {
+        clearInterval(interval)
+      }
+    }, 2000) // Poll every 2 seconds
 
     return () => clearInterval(interval)
-  }, [job, jobId])
+  }, [jobId, job?.status, selectedStage])
 
-  // Handle apply settings (for re-running with different settings)
-  const handleApplySettings = () => {
-    if (!job || !job.model_id) return
+  const handleApplySettings = async () => {
+    if (!job || job.status !== 'succeeded') return
 
-    // Get the input image from the current job
-    const inputImageUrl = job.result?.input?.image_url || `/static/${jobId}/input.png`
-    
-    // For now, just show a message that this feature needs the original image
-    // In a full implementation, you'd need to store the original image file
-    alert('To change settings, please upload a new image from the home page.')
+    const jobData = job as any
+    const imageUrl = jobData.input?.image_url
+
+    if (!imageUrl || !job.model_id) {
+      setError('Cannot create new job: missing image or model information')
+      return
+    }
+
+    try {
+      // Fetch the original image
+      const response = await fetch(imageUrl.startsWith('http') ? imageUrl : `/${imageUrl}`)
+      const blob = await response.blob()
+      const imageFile = new File([blob], 'image.jpg', { type: 'image/jpeg' })
+
+      // Create new job with updated settings
+      const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
+      router.push(`/viewer/${newJob.job_id}`)
+    } catch (err) {
+      console.error('Failed to create new job:', err)
+      setError(err instanceof Error ? err.message : 'Failed to create new job')
+    }
   }
 
-  // Dummy handlers for Navbar (not used on viewer page)
-  const navHandlers = {
-    onScrollToFeatures: () => {},
-    onScrollToModels: () => {},
-    onScrollToGetStarted: () => {},
-    onScrollToHowItWorks: () => {},
-  }
-
-  // Loading state
-  if (isLoading) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar {...navHandlers} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600">Loading job status...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    )
-  }
-
-  // Error state
-  if (error || !job) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar {...navHandlers} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md mx-auto px-4">
-            <div className="text-red-600 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Failed to Load Job</h1>
-            <p className="text-gray-600 mb-6">{error || 'Job not found'}</p>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar
+          onScrollToFeatures={() => {}}
+          onScrollToModels={() => {}}
+          onScrollToGetStarted={() => {}}
+          onScrollToHowItWorks={() => {}}
+        />
+        <div className="container mx-auto px-4 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h1 className="text-2xl font-bold text-red-900 mb-2">Error</h1>
+            <p className="text-red-700">{error}</p>
             <button
               onClick={() => router.push('/')}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Go to Home
+              Go Back Home
             </button>
           </div>
         </div>
-        <Footer />
       </div>
     )
   }
 
-  // Extract layers for LayerPicker
-  const layers = job.status === 'succeeded' && job.result?.layers
-    ? job.result.layers.map((l: any) => ({
-        stage: l.stage || l.name,
-        name: l.name,
-        shape: l.shape,
-      }))
-    : []
+  if (!job) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar
+          onScrollToFeatures={() => {}}
+          onScrollToModels={() => {}}
+          onScrollToGetStarted={() => {}}
+          onScrollToHowItWorks={() => {}}
+        />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading job...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const jobData = job as any
+  const layers = job.status === 'succeeded' ? (jobData.layers || []) : []
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar {...navHandlers} />
-      
+      <Navbar
+        onScrollToFeatures={() => {}}
+        onScrollToModels={() => {}}
+        onScrollToGetStarted={() => {}}
+        onScrollToHowItWorks={() => {}}
+      />
       <ErrorBoundary>
-        {/* Status Banner */}
-        <JobStatusBanner job={job} />
+        <>
+          {/* Job Status Banner */}
+          <JobStatusBanner job={job} />
 
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar - Layer Picker */}
-          <aside className="w-64 border-r bg-white overflow-y-auto">
-            <LayerPicker
-              layers={layers}
-              selectedStage={selectedStage}
-              onStageSelect={setSelectedStage}
-            />
-          </aside>
+          {/* Top Section - Network Graph */}
+          {job.status === 'succeeded' && (
+            <div className="bg-white border-b">
+              <NetworkGraph
+                job={job}
+                selectedStage={selectedStage}
+                onStageSelect={setSelectedStage}
+              />
+              <div className="px-6 pb-4">
+                <p className="text-sm text-gray-600 text-center">
+                  Click a layer to see what the CNN learns at that stage.
+                </p>
+              </div>
+            </div>
+          )}
 
-          {/* Center - Visualization Area */}
-          <main className="flex-1 flex flex-col overflow-hidden">
-            {job.status === 'succeeded' ? (
-              <>
-                {/* Network Diagram */}
-                {layers.length > 0 && (
-                  <div className="border-b bg-white p-4">
-                    <NetworkDiagram
+          {/* Main Content */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Sidebar - Layers */}
+            <div className="w-64 border-r bg-white overflow-y-auto flex flex-col">
+              {job.status === 'succeeded' && layers.length > 0 && (
+                <>
+                  {/* Play Button */}
+                  <div className="p-4 border-b">
+                    <button
+                      onClick={() => {
+                        // Auto-play through layers
+                        let currentIndex = 0
+                        const playInterval = setInterval(() => {
+                          if (currentIndex < layers.length) {
+                            setSelectedStage(layers[currentIndex].stage || null)
+                            currentIndex++
+                          } else {
+                            clearInterval(playInterval)
+                          }
+                        }, 2000)
+                      }}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                      Play
+                    </button>
+                  </div>
+
+                  {/* Layers Section */}
+                  <div className="p-4 border-b">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-2">Layers</h2>
+                    <p className="text-sm text-gray-600 mb-4">Start from conv1 and move right.</p>
+                  </div>
+
+                  {/* Layer Picker */}
+                  <div className="flex-1">
+                    <LayerPicker
                       layers={layers}
                       selectedStage={selectedStage}
-                      onLayerSelect={setSelectedStage}
-                      inputImageUrl={job.result?.input?.image_url ? getImageUrl(job.result.input.image_url) : undefined}
-                      predictionLabel={job.result?.prediction?.topk?.[0]?.class_name}
-                      predictionProb={job.result?.prediction?.topk?.[0]?.prob}
+                      onStageSelect={setSelectedStage}
                     />
                   </div>
-                )}
+                </>
+              )}
 
-                {/* Visualization Canvas */}
-                <div className="flex-1 overflow-y-auto">
-                  <VisualizationCanvas job={job} selectedStage={selectedStage} />
-                </div>
-
-                {/* Feature Maps Grid */}
-                {selectedStage && (
-                  <div className="border-t bg-white p-6">
-                    <FeatureMapGrid job={job} selectedStage={selectedStage} />
+              {/* Loading State */}
+              {job.status !== 'succeeded' && (
+                <div className="p-4">
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-sm text-gray-600">Loading layers...</p>
                   </div>
-                )}
-
-                {/* Grad-CAM Timeline */}
-                <div className="border-t bg-white p-6">
-                  <GradCAMTimeline job={job} selectedStage={selectedStage} />
                 </div>
+              )}
+            </div>
 
-                {/* Heatmap Overlay */}
-                <div className="border-t bg-white p-6">
-                  <HeatmapOverlay job={job} selectedStage={selectedStage} />
+            {/* Main Visualization Area */}
+            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+              {job.status === 'succeeded' ? (
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {/* If layer is selected, show layer details first */}
+                  {selectedStage ? (
+                    <>
+                      {/* Layer Title and Description */}
+                      {(() => {
+                        const selectedLayer = layers.find((l: any) => l.stage === selectedStage)
+                        return (
+                          <LayerExplainer
+                            layerName={selectedLayer?.name || null}
+                            layerStage={selectedStage}
+                          />
+                        )
+                      })()}
+
+                      {/* Feature Maps Grid */}
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Top Feature Maps</h2>
+                        {(() => {
+                          const selectedLayer = layers.find((l: any) => l.stage === selectedStage)
+                          const layerName = selectedLayer?.name || selectedStage
+                          return (
+                            <div className="mb-4">
+                              <h3 className="text-lg font-medium text-gray-700 mb-4">
+                                Feature Maps: {layerName}
+                              </h3>
+                              <FeatureMapGrid job={job} selectedStage={selectedStage} />
+                            </div>
+                          )
+                        })()}
+                      </div>
+
+                      {/* Grad-CAM below layer details */}
+                      <div className="mt-8">
+                        <GradCAMTimeline job={job} selectedStage={selectedStage} />
+                      </div>
+                    </>
+                  ) : (
+                    /* If no layer selected, show Grad-CAM prominently in center */
+                    <div className="flex flex-col items-center justify-center min-h-[400px]">
+                      <div className="w-full max-w-4xl">
+                        <GradCAMTimeline job={job} selectedStage={selectedStage} />
+                      </div>
+                      <div className="mt-8 text-center">
+                        <p className="text-gray-500 text-lg mb-2">Select a layer to view feature maps</p>
+                        <p className="text-gray-400 text-sm">Click on a layer from the network diagram or left sidebar</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center p-12">
-                <div className="text-center max-w-md">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-6" />
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Processing Your Image
-                  </h2>
-                  <p className="text-gray-600 mb-4">
-                    {job.message || 'Running inference and generating visualizations...'}
-                  </p>
-                  <div className="bg-gray-200 rounded-full h-2 overflow-hidden max-w-xs mx-auto">
-                    <div
-                      className="bg-blue-600 h-full transition-all duration-300"
-                      style={{ width: `${job.progress}%` }}
-                    />
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">{job.message || 'Processing...'}</p>
                   </div>
-                  <p className="text-sm text-gray-500 mt-2">{job.progress}% complete</p>
                 </div>
-              </div>
+              )}
+            </div>
+
+            {/* Right Sidebar - Details & Controls */}
+            {job.status === 'succeeded' && (
+              <RightDetailsPanel
+                job={job}
+                selectedStage={selectedStage}
+                topK={topK}
+                camLayers={camLayers}
+                availableLayers={availableLayers}
+                onTopKChange={setTopK}
+                onLayersChange={setCamLayers}
+                onApplySettings={handleApplySettings}
+              />
             )}
-          </main>
-
-          {/* Right Sidebar - Details Panel */}
-          {job.status === 'succeeded' && (
-            <RightDetailsPanel
-              job={job}
-              selectedStage={selectedStage}
-              topK={topK}
-              camLayers={camLayers}
-              availableLayers={availableLayers}
-              onTopKChange={setTopK}
-              onLayersChange={setCamLayers}
-              onApplySettings={handleApplySettings}
-            />
-          )}
-        </div>
+          </div>
+        </>
       </ErrorBoundary>
-
-      <Footer />
     </div>
   )
 }
-

@@ -163,9 +163,6 @@ export default function ViewerPage() {
       />
       <ErrorBoundary>
         <>
-          {/* Job Status Banner */}
-          <JobStatusBanner job={job} />
-
           {/* Top Section - Network Diagram */}
           {job.status === 'succeeded' && (
             <div className="bg-white border-b">
@@ -262,12 +259,6 @@ export default function ViewerPage() {
                         </>
                       )}
                     </button>
-                  </div>
-
-                  {/* Layers Section */}
-                  <div className="p-4 border-b">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-2">Layers</h2>
-                    <p className="text-sm text-gray-600 mb-4">Start from conv1 and move right.</p>
                   </div>
 
                   {/* Layer Picker */}

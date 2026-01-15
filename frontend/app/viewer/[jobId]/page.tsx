@@ -89,16 +89,23 @@ function ViewerPageContent() {
 
   const router = useRouter()
 
+  // Extract job data for NetworkDiagram
+  const jobData = job as any
+  const inputImageUrl = jobData?.input?.image_url || jobData?.result?.input?.image_url
+  const topPrediction = jobData?.prediction?.topk?.[0]
+  const predictionLabel = topPrediction?.class_name
+  const predictionProb = topPrediction?.prob
+
   const handleRetry = useCallback(async () => {
     if (!job) return
     setLoadingError(null)
     resetLoadingProgress()
     try {
       setIsLoading(true)
-      const jobData = job as any
-      const inputImageUrl = jobData.input?.image_url || jobData.result?.input?.image_url
-      if (!inputImageUrl) throw new Error('Input image URL not found')
-      const imageFile = await urlToFile(inputImageUrl)
+      const jobDataForRetry = job as any
+      const inputImageUrlForRetry = jobDataForRetry.input?.image_url || jobDataForRetry.result?.input?.image_url
+      if (!inputImageUrlForRetry) throw new Error('Input image URL not found')
+      const imageFile = await urlToFile(inputImageUrlForRetry)
       const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
       setLoadingProgress(100)
       setTimeout(() => {
@@ -122,13 +129,13 @@ function ViewerPageContent() {
   const handleApplySettings = useCallback(async () => {
     if (!job) return
     try {
-      const jobData = job as any
-      const inputImageUrl = jobData.input?.image_url || jobData.result?.input?.image_url
-      if (!inputImageUrl) throw new Error('Input image URL not found')
+      const jobDataForApply = job as any
+      const inputImageUrlForApply = jobDataForApply.input?.image_url || jobDataForApply.result?.input?.image_url
+      if (!inputImageUrlForApply) throw new Error('Input image URL not found')
       setIsLoading(true)
       setLoadingError(null)
       resetLoadingProgress()
-      const imageFile = await urlToFile(inputImageUrl)
+      const imageFile = await urlToFile(inputImageUrlForApply)
       const newJob = await createJob(imageFile, job.model_id, topK, camLayers)
       setLoadingProgress(100)
       setTimeout(() => {
@@ -142,8 +149,6 @@ function ViewerPageContent() {
       setIsLoading(false)
     }
   }, [job, topK, camLayers, router, setLoadingProgress, resetLoadingProgress])
-
-  const jobData = job as any
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -159,11 +164,18 @@ function ViewerPageContent() {
       {job && job.status === 'succeeded' ? (
         <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6">
           <main className="flex-1 space-y-6">
-            <NetworkDiagram job={job} selectedStage={selectedLayer} />
+            <NetworkDiagram
+              layers={layers}
+              selectedStage={selectedLayer}
+              onLayerSelect={setSelectedLayer}
+              inputImageUrl={inputImageUrl}
+              predictionLabel={predictionLabel}
+              predictionProb={predictionProb}
+            />
             <LayerPicker
               layers={layers}
-              selectedLayer={selectedLayer}
-              onLayerSelect={setSelectedLayer}
+              selectedStage={selectedLayer}
+              onStageSelect={setSelectedLayer}
             />
             {selectedLayer && (
               <div className="mb-8">

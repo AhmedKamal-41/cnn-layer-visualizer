@@ -64,7 +64,7 @@ async def startup_event():
     try:
         torch_home.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        fallback = Path(__file__).resolve().parent.parent.parent / ".cache" / "torch"
+        fallback = Path(__file__).resolve().parent.parent / ".cache" / "torch"
         try:
             fallback.mkdir(parents=True, exist_ok=True)
         except OSError:

@@ -69,7 +69,7 @@ export default function LayerProgression({ prediction, confidence, layers }: Pro
         <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:text-xs">
           Grad-CAM by layer (click to inspect)
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {layers.map((layer, idx) => {
             const isActive = idx === selectedIdx;
             return (
@@ -77,24 +77,19 @@ export default function LayerProgression({ prediction, confidence, layers }: Pro
                 key={layer.name}
                 type="button"
                 onClick={() => setSelectedIdx(idx)}
-                className={`group overflow-hidden rounded-lg border-2 text-left transition-all ${
-                  isActive
-                    ? "border-zinc-900 shadow-sm dark:border-zinc-100"
-                    : "border-transparent opacity-80 hover:opacity-100"
-                }`}
+                className="group overflow-hidden rounded-lg border border-zinc-200 bg-white text-left shadow-sm transition-colors hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:border-zinc-600"
                 aria-label={`View ${layer.name} heatmap`}
                 aria-pressed={isActive}
               >
-                <div className="relative aspect-square max-h-36 w-full bg-zinc-100 sm:max-h-40 dark:bg-zinc-900">
+                <div className="relative h-44 w-full overflow-hidden bg-zinc-100 sm:h-52 dark:bg-zinc-900">
                   <img
                     src={layer.overlayUrl}
                     alt=""
                     className="h-full w-full object-cover"
                   />
-                  {isActive && <div className="absolute inset-0 ring-2 ring-inset ring-white/35" />}
                 </div>
                 <div
-                  className={`px-1.5 py-1 text-center text-[10px] font-medium leading-tight transition-colors sm:text-xs ${
+                  className={`px-2 py-1.5 text-center text-[11px] font-medium leading-tight transition-colors sm:text-xs ${
                     isActive
                       ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
                       : "bg-zinc-50 text-zinc-700 group-hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:group-hover:bg-zinc-800"

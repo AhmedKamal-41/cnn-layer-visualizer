@@ -26,9 +26,15 @@ jobs:
         with:
           node-version: "20"
 
+      # No package-lock.json: cache ~/.npm from package.json hash (not npm's lockfile cache)
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('frontend/package.json') }}
+
       - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        run: npm install
 
       - name: Type check
         run: npm run type-check
@@ -54,7 +60,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+          cache: pip
           cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
@@ -72,19 +78,31 @@ jobs:
           TESTING: "true"
 
   docker-build:
-    name: Docker build verification
+    name: Docker build + smoke (compose)
     runs-on: ubuntu-latest
     needs: [frontend, backend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build with docker compose
+      - name: Build images
+        env:
+          DOCKER_BUILDKIT: 1
         run: docker compose build
 
-      - name: Smoke test container startup
+      - name: Smoke test (containers + health)
         run: |
           docker compose up -d
-          sleep 20
-          curl --fail --retry 5 --retry-delay 3 http://localhost:8000/api/v1/health || (docker compose logs && exit 1)
+          echo "Waiting for backend health endpoint..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8000/api/v1/health >/dev/null; then
+              echo "Backend is up."
+              docker compose down
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Timeout waiting for backend."
+          docker compose logs
           docker compose down
+          exit 1

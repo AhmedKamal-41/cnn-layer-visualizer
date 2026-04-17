@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function ModelsDashboardPromo() {
   return (
-    <section className="border-y border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 py-20 dark:border-zinc-800 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+    <section className="border-y border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 py-16 dark:border-zinc-800 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-5">
 

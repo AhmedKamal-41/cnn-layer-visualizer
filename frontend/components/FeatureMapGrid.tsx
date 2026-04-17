@@ -129,7 +129,7 @@ export default function FeatureMapGrid({ job, selectedStage }: FeatureMapGridPro
             />
           </svg>
           <p className="text-sm font-medium text-gray-700 mb-1">No feature maps available</p>
-          <p className="text-xs text-gray-500">This layer doesn't have any feature maps to display</p>
+          <p className="text-xs text-gray-500">This layer does not have any feature maps to display</p>
         </div>
       </div>
     )

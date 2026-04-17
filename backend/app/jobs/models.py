@@ -2,14 +2,14 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, List, Any
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 
 class JobStatus(str, Enum):
     """Job status enumeration."""
-    
+
     QUEUED = "queued"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
@@ -18,7 +18,7 @@ class JobStatus(str, Enum):
 
 class JobResult(BaseModel):
     """Job result data (internal storage)."""
-    
+
     prediction: Any = Field(default=None, description="Model prediction output")
     layers_metadata: List[Dict[str, Any]] = Field(default_factory=list, description="Metadata for each layer")
     assets_manifest: Dict[str, Any] = Field(default_factory=dict, description="URLs/paths to generated assets")
@@ -126,7 +126,7 @@ class JobResultResponse(BaseModel):
 
 class JobRecord(BaseModel):
     """Job record model."""
-    
+
     job_id: str = Field(..., description="Unique job identifier (UUID)")
     model_id: str = Field(..., description="Model identifier from registry")
     created_at: datetime = Field(default_factory=datetime.now, description="Job creation timestamp")
@@ -134,7 +134,7 @@ class JobRecord(BaseModel):
     progress: int = Field(default=0, ge=0, le=100, description="Job progress percentage (0-100)")
     message: Optional[str] = Field(default=None, description="Optional status message")
     result: Optional[JobResult] = Field(default=None, description="Job result data (null until completion)")
-    
+
     class Config:
         """Pydantic config."""
         use_enum_values = True

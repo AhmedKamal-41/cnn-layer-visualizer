@@ -57,21 +57,21 @@ async def startup_event():
     logger.info(f"Environment: {settings.BACKEND_ENV}")
     logger.info(f"Storage directory: {settings.STORAGE_DIR}")
     logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
-    
+
     # Ensure TORCH_HOME directory exists and set environment variable
     settings.TORCH_HOME.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("TORCH_HOME", str(settings.TORCH_HOME))
     logger.info(f"PyTorch cache directory: {settings.TORCH_HOME}")
-    
+
     # Start job worker
     await job_service.start_worker()
     logger.info("Job worker started")
-    
+
     # Preload models if configured
     if settings.PRELOAD_MODELS:
         preload_start = time.time()
         model_ids_to_preload = []
-        
+
         if settings.PRELOAD_MODELS.lower() == "all":
             model_ids_to_preload = get_all_model_ids()
             logger.info(f"Preloading all models: {len(model_ids_to_preload)} models")
@@ -79,10 +79,10 @@ async def startup_event():
             # Comma-separated list
             model_ids_to_preload = [mid.strip() for mid in settings.PRELOAD_MODELS.split(",") if mid.strip()]
             logger.info(f"Preloading specified models: {model_ids_to_preload}")
-        
+
         strategy = settings.PRELOAD_STRATEGY
         logger.info(f"Preload strategy: {strategy}")
-        
+
         for model_id in model_ids_to_preload:
             model_start = time.time()
             try:
@@ -102,10 +102,10 @@ async def startup_event():
                     logger.info(f"Preloaded and cached model: {model_id} ({model_time:.1f}ms)")
             except Exception as e:
                 logger.error(f"Failed to preload model {model_id}: {e}")
-        
+
         total_time = (time.time() - preload_start) * 1000
         logger.info(f"Model preloading complete ({len(model_ids_to_preload)} models, {total_time:.1f}ms)")
-    
+
     logger.info("Startup complete")
 
 
@@ -113,9 +113,9 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on application shutdown."""
     logger.info("Shutting down ConvLens API")
-    
+
     # Stop job worker
     await job_service.stop_worker()
-    
+
     logger.info("Shutdown complete")
 

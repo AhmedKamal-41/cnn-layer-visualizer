@@ -1,30 +1,31 @@
 """API v1 routes."""
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from app.models.registry import list_models, get_model_config
-from app.models.layer_mapping import get_default_cam_layers
-from app.models.loaders import load_model
-from app.jobs.service import job_service
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+
+from app.core.config import settings
 from app.jobs.models import (
-    JobRecord,
-    JobStatus,
-    JobResultResponse,
-    ModelInfo,
+    CAMInfo,
+    ChannelInfo,
+    GradCAMClassInfo,
+    GradCAMInfo,
+    GradCAMOverlayInfo,
     InputInfo,
-    PredictionInfo,
-    PredictionClass,
+    JobRecord,
+    JobResultResponse,
+    JobStatus,
     LayerInfo,
     LayerShape,
-    ChannelInfo,
-    CAMInfo,
-    GradCAMInfo,
-    GradCAMClassInfo,
-    GradCAMOverlayInfo,
+    ModelInfo,
+    PredictionClass,
+    PredictionInfo,
     TimingsInfo,
 )
-from app.core.config import settings
+from app.jobs.service import job_service
+from app.models.layer_mapping import get_default_cam_layers
+from app.models.loaders import load_model
+from app.models.registry import get_model_config, list_models
 
 router = APIRouter()
 
@@ -38,31 +39,31 @@ async def create_job(
 ):
     """
     Create a new inference job.
-    
+
     Args:
         image: Image file to process
         model_id: Model identifier from registry
         top_k: Number of top classes for Grad-CAM (default: 1, range: 1-5)
         cam_layers: Comma-separated layer names for Grad-CAM (default: "conv1,layer1,layer2,layer3,layer4")
-        
+
     Returns:
         JobRecord with job_id and status
     """
     # Validate image file
     if not image.content_type or not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
-    
+
     # Validate model_id exists in registry
     model_config = get_model_config(model_id)
     if model_config is None:
         raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found in registry")
-    
+
     # Read image bytes
     try:
         image_bytes = await image.read()
         if len(image_bytes) == 0:
             raise HTTPException(status_code=400, detail="Image file is empty")
-        
+
         # Validate file size (convert MB to bytes)
         max_size_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
         if len(image_bytes) > max_size_bytes:
@@ -74,13 +75,13 @@ async def create_job(
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error reading image file: {str(e)}")
-    
+
     # Parse and validate top_k
     if top_k is None:
         top_k = 1
     elif top_k < 1 or top_k > 5:
         raise HTTPException(status_code=400, detail="top_k must be between 1 and 5")
-    
+
     # Parse and validate cam_layers
     if cam_layers is None:
         # Use model-specific defaults from registry
@@ -91,15 +92,15 @@ async def create_job(
         cam_layers_list = [layer.strip() for layer in cam_layers.split(",") if layer.strip()]
         if not cam_layers_list:
             raise HTTPException(status_code=400, detail="cam_layers must contain at least one layer")
-    
+
     # Create job
     job_id = await job_service.create_job(model_id, image_bytes, top_k=top_k, cam_layers=cam_layers_list)
-    
+
     # Return job record
     job = await job_service.get_job(job_id)
     if not job:
         raise HTTPException(status_code=500, detail="Failed to create job")
-    
+
     return job
 
 
@@ -107,13 +108,13 @@ async def create_job(
 async def debug_model_modules(model_id: str):
     """
     Debug endpoint to inspect model module structure.
-    
+
     Returns a list of all named modules in the model, useful for verifying
     which layer paths exist (e.g., for Grad-CAM configuration).
-    
+
     Args:
         model_id: Model identifier from registry
-        
+
     Returns:
         JSON with model_id and list of module names
     """
@@ -121,17 +122,17 @@ async def debug_model_modules(model_id: str):
     model_config = get_model_config(model_id)
     if model_config is None:
         raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found in registry")
-    
+
     try:
         # Load the model
         model = load_model(model_id)
-        
+
         # Get all named modules
         module_names = []
         for name, _ in model.named_modules():
             if name:  # Skip empty name (root module)
                 module_names.append(name)
-        
+
         return {
             "model_id": model_id,
             "module_names": module_names,
@@ -145,28 +146,28 @@ async def debug_model_modules(model_id: str):
 async def get_job_status(job_id: str):
     """
     Get job status and results.
-    
+
     Args:
         job_id: Unique job identifier
-        
+
     Returns:
         JobRecord for non-succeeded jobs, JobResultResponse for succeeded jobs
     """
     job = await job_service.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
-    
+
     # If job is not succeeded, return JobRecord as-is
     if job.status != JobStatus.SUCCEEDED or job.result is None:
         return job
-    
+
     # Transform to JobResultResponse for succeeded jobs
     result = job.result
-    
+
     # Get model config
     model_config = get_model_config(job.model_id)
     model_display_name = model_config.get("display_name", job.model_id) if model_config else job.model_id
-    
+
     # Build prediction info
     prediction_data = result.prediction if result.prediction else {}
     topk_data = prediction_data.get("topk", [])
@@ -178,7 +179,7 @@ async def get_job_status(job_id: str):
         )
         for item in topk_data
     ]
-    
+
     # Build layers info
     layers_list = []
     for layer_data in result.layers_metadata:
@@ -204,7 +205,7 @@ async def get_job_status(job_id: str):
                 cam_target_path=layer_data.get("cam_target_path"),
             )
         )
-    
+
     # Build CAMs info (legacy format)
     cams_data = result.assets_manifest.get("cams", [])
     cams_list = [
@@ -216,7 +217,7 @@ async def get_job_status(job_id: str):
         )
         for item in cams_data
     ]
-    
+
     # Build Grad-CAM info (multi-layer format)
     gradcam_data = result.assets_manifest.get("gradcam")
     gradcam_info = None
@@ -244,7 +245,7 @@ async def get_job_status(job_id: str):
             layers=gradcam_data.get("layers", []),
             warnings=gradcam_data.get("warnings"),
         )
-    
+
     # Build timings
     timings_data = result.timings
     timings = TimingsInfo(
@@ -253,7 +254,7 @@ async def get_job_status(job_id: str):
         serialize_ms=timings_data.get("serialize_ms", 0.0),
         total_ms=timings_data.get("total_ms", 0.0),
     )
-    
+
     # Build response
     response = JobResultResponse(
         job_id=job.job_id,
@@ -266,7 +267,7 @@ async def get_job_status(job_id: str):
         gradcam=gradcam_info,
         timings=timings,
     )
-    
+
     return response
 
 
@@ -274,7 +275,7 @@ async def get_job_status(job_id: str):
 async def health_check():
     """
     Health check endpoint.
-    
+
     Returns:
         Health status
     """
@@ -285,7 +286,7 @@ async def health_check():
 async def get_models():
     """
     Get list of available models from the registry.
-    
+
     Returns:
         List of model configurations with id, display_name, and input_size
     """
@@ -297,13 +298,13 @@ async def get_models():
 async def get_model(model_id: str):
     """
     Get full configuration for a specific model.
-    
+
     Args:
         model_id: Model identifier
-        
+
     Returns:
         Full model configuration including normalization and layers_to_hook
-        
+
     Raises:
         HTTPException: If model not found
     """

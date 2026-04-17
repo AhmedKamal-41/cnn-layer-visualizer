@@ -1,7 +1,7 @@
 """Application configuration."""
 
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List, Union
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,39 +9,39 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Application settings."""
-    
+
     # Environment Configuration
     BACKEND_ENV: str = "development"  # development, production, testing
-    
+
     # API Configuration
     API_V1_PREFIX: str = "/api/v1"
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    
+
     # Storage Configuration
     STORAGE_DIR: Path = Path("./storage")
-    
+
     # Model Registry
     MODEL_REGISTRY_PATH: Path = Path(__file__).parent.parent.parent / "model_registry.yaml"
-    
+
     # Cache Configuration
     CACHE_ENABLED: bool = True
     CACHE_MAX_ITEMS: int = 100
-    
+
     # Model Configuration
     PRELOAD_MODELS: str = ""  # "" = none, "all" = all models, else comma-separated list
     PRELOAD_STRATEGY: str = "download_only"  # "download_only" or "load_into_ram"
     MODEL_CACHE_MAX: int = 3  # Maximum number of models to keep in memory (LRU cache)
     TORCH_HOME: Path = Path("/data/.torch")  # PyTorch cache directory (uses TORCH_HOME env var if set)
-    
+
     # Upload Configuration
     MAX_UPLOAD_SIZE_MB: int = 10
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,
         extra="ignore",
     )
-    
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
         if isinstance(v, list):
             return v
         return []
-    
+
     @field_validator("STORAGE_DIR", mode="after")
     @classmethod
     def resolve_storage_dir(cls, v: Path) -> Path:
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
         else:
             v = v.resolve()
         return v
-    
+
     @field_validator("MODEL_REGISTRY_PATH", mode="after")
     @classmethod
     def resolve_model_registry_path(cls, v: Path) -> Path:
@@ -73,7 +73,7 @@ class Settings(BaseSettings):
         else:
             v = v.resolve()
         return v
-    
+
     @field_validator("TORCH_HOME", mode="after")
     @classmethod
     def resolve_torch_home(cls, v: Path) -> Path:
@@ -83,7 +83,7 @@ class Settings(BaseSettings):
         else:
             v = v.resolve()
         return v
-    
+
     @field_validator("PRELOAD_STRATEGY", mode="before")
     @classmethod
     def validate_preload_strategy(cls, v: str) -> str:
@@ -92,7 +92,7 @@ class Settings(BaseSettings):
         if v not in allowed:
             raise ValueError(f"PRELOAD_STRATEGY must be one of {allowed}, got: {v}")
         return v
-    
+
     @field_validator("MODEL_CACHE_MAX", mode="after")
     @classmethod
     def validate_model_cache_max(cls, v: int) -> int:

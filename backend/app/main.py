@@ -4,6 +4,7 @@ import gc
 import logging
 import os
 import time
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,10 +59,31 @@ async def startup_event():
     logger.info(f"Storage directory: {settings.STORAGE_DIR}")
     logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
 
-    # Ensure TORCH_HOME directory exists and set environment variable
-    settings.TORCH_HOME.mkdir(parents=True, exist_ok=True)
-    os.environ.setdefault("TORCH_HOME", str(settings.TORCH_HOME))
-    logger.info(f"PyTorch cache directory: {settings.TORCH_HOME}")
+    # TORCH_HOME must be writable (Railway/Docker often cannot create /data)
+    torch_home = settings.TORCH_HOME
+    try:
+        torch_home.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        fallback = Path(__file__).resolve().parent.parent.parent / ".cache" / "torch"
+        try:
+            fallback.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            logger.exception(
+                "Could not create TORCH_HOME at %s (%s) or fallback %s",
+                torch_home,
+                exc,
+                fallback,
+            )
+            raise
+        logger.warning(
+            "TORCH_HOME %s is not writable (%s); using %s",
+            torch_home,
+            exc,
+            fallback,
+        )
+        torch_home = fallback
+    os.environ["TORCH_HOME"] = str(torch_home)
+    logger.info(f"PyTorch cache directory: {torch_home}")
 
     # Start job worker
     await job_service.start_worker()

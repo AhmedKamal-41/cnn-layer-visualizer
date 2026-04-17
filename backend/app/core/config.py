@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     PRELOAD_MODELS: str = ""  # "" = none, "all" = all models, else comma-separated list
     PRELOAD_STRATEGY: str = "download_only"  # "download_only" or "load_into_ram"
     MODEL_CACHE_MAX: int = 3  # Maximum number of models to keep in memory (LRU cache)
-    TORCH_HOME: Path = Path("/data/.torch")  # PyTorch cache directory (uses TORCH_HOME env var if set)
+    # Default under app root so Docker/non-root deploys can write without a host /data mount
+    TORCH_HOME: Path = Path(".cache/torch")
 
     # Upload Configuration
     MAX_UPLOAD_SIZE_MB: int = 10
@@ -77,9 +78,10 @@ class Settings(BaseSettings):
     @field_validator("TORCH_HOME", mode="after")
     @classmethod
     def resolve_torch_home(cls, v: Path) -> Path:
-        """Resolve TORCH_HOME to absolute path."""
+        """Resolve TORCH_HOME; relative paths are anchored to the backend project root."""
         if not v.is_absolute():
-            v = v.resolve()
+            base_path = Path(__file__).parent.parent.parent
+            v = (base_path / v).resolve()
         else:
             v = v.resolve()
         return v

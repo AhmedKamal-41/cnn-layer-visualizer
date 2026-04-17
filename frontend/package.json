@@ -7,7 +7,7 @@
     "dev": "next dev",
     "dev:custom": "cross-env NEXT_PUBLIC_API_URL=http://localhost:8000 next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node ./node_modules/next/dist/bin/next start -H 0.0.0.0",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
@@ -16,7 +16,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "next": "14.0.4",
+    "next": "14.2.35",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^3.8.1"
@@ -27,7 +27,7 @@
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",
-    "eslint-config-next": "14.0.4",
+    "eslint-config-next": "14.2.35",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3"

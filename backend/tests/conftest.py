@@ -38,7 +38,13 @@ def sample_image_bytes(sample_image: Image.Image) -> bytes:
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
     """Create a FastAPI test client."""
-    # TestClient handles startup/shutdown events automatically
+    # Reset the module-level job_service singleton so each test gets a fresh
+    # asyncio.Queue/Lock/worker_task. Without this, the queue from a prior
+    # test's closed event loop leaves waiters parked forever and the next
+    # TestClient's startup hangs indefinitely.
+    from app.jobs.service import job_service
+    job_service.__init__()
+
     with TestClient(app) as test_client:
         yield test_client
 

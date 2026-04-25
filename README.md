@@ -40,7 +40,7 @@ ConvLens combines modern web technologies with PyTorch-based deep learning infer
 
 ### Infrastructure
 
-![Docker](https://img.shields.io/badge/Docker-Latest-2496ED) ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2.0%2B-2496ED)
+![Docker](https://img.shields.io/badge/Docker-Latest-2496ED) ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2.0%2B-2496ED) ![AWS Lambda](https://img.shields.io/badge/AWS_Lambda-FF9900) ![Amazon S3](https://img.shields.io/badge/Amazon_S3-569A31) ![API Gateway](https://img.shields.io/badge/API_Gateway-FF4F8B) ![Railway](https://img.shields.io/badge/Railway-0B0D0E)
 
 ### Deep Learning Models
 
@@ -54,6 +54,63 @@ The platform supports the following pre-trained CNN architectures from torchvisi
 - **ShuffleNet**: ShuffleNet-V2
 
 All models are pre-trained on ImageNet and loaded with default weights from torchvision.
+
+## High-Level Architecture
+
+ConvLens runs on two independent deployment targets from the same backend codebase. The application logic — FastAPI router, job pipeline, model registry, inference engine, Grad-CAM and feature-map generation — is shared. Only the deployment layer and the storage backend differ, switched at deploy time by the `STORAGE_BACKEND` environment variable.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                  Browser (Next.js UI)                    │
+│                    hosted on Vercel                      │
+└─────────────────────────┬────────────────────────────────┘
+                          │ HTTPS
+                ┌─────────┴──────────┐
+                │                    │
+                ▼                    ▼
+     ┌──────────────────┐   ┌──────────────────────┐
+     │     Railway      │   │   AWS API Gateway    │
+     │                  │   │          │           │
+     │    FastAPI +     │   │          ▼           │
+     │    Uvicorn in    │   │     AWS Lambda       │
+     │      Docker      │   │   (FastAPI via       │
+     │                  │   │    Mangum adapter)   │
+     │   Filesystem     │   │          │           │
+     │     storage      │   │          ▼           │
+     │    (volume)      │   │     Amazon S3        │
+     │                  │   │  (generated PNGs)    │
+     └──────────────────┘   │                      │
+                            │   CloudWatch Logs    │
+                            └──────────────────────┘
+
+   Same FastAPI codebase — deployment switched by STORAGE_BACKEND env var
+       STORAGE_BACKEND=filesystem (default)  →  Railway path
+       STORAGE_BACKEND=s3                    →  AWS path
+```
+
+The frontend is identical for both targets — it points at whichever backend URL is configured in `NEXT_PUBLIC_API_URL`. Generated assets (feature maps, Grad-CAM overlays) reach the browser via `/static/{path}` URLs that resolve to either FastAPI's `StaticFiles` mount (Railway) or directly to S3 (AWS).
+
+## Deployment
+
+ConvLens supports two parallel deployment targets. Both run from the same backend code; the active path is selected at deploy time by the `STORAGE_BACKEND` environment variable.
+
+### Railway (existing)
+
+- Docker Compose, single backend container alongside the Next.js frontend container.
+- `STORAGE_BACKEND=filesystem` (or unset — filesystem is the default, so existing Railway deploys are unaffected).
+- Generated PNGs are written to `./storage/` inside the container and mounted as a volume so assets persist for the duration of a deploy.
+- Served back to the browser via FastAPI's `StaticFiles` mount at `/static/...`.
+- Reference: [`docker-compose.yml`](docker-compose.yml), [`backend/Dockerfile`](backend/Dockerfile).
+
+### AWS (new)
+
+- Lambda container image built from [`backend/Dockerfile.lambda`](backend/Dockerfile.lambda) and deployed via AWS SAM ([`backend/template.yaml`](backend/template.yaml)).
+- API Gateway HTTP API fronts the Lambda; FastAPI runs unchanged inside the function via the [Mangum](https://github.com/jordaneremieff/mangum) ASGI adapter.
+- `STORAGE_BACKEND=s3`. PNGs are written to an S3 bucket and the storage service returns public-read URLs the frontend fetches directly.
+- Frontend continues to be hosted on Vercel and points at the API Gateway URL via `NEXT_PUBLIC_API_URL`.
+- **Cold start ~5–10s** on the full 11-model image (model weights are pre-baked into the container at build time, not downloaded at boot). **Warm requests ~250–500ms.**
+- **Cost:** free-tier eligible at portfolio scale — Lambda, API Gateway HTTP API, and S3 are all comfortably under their free-tier ceilings for typical demo traffic.
+- Reference: [`backend/template.yaml`](backend/template.yaml), [`docs/aws-deploy.md`](docs/aws-deploy.md).
 
 ## System Design
 
@@ -84,21 +141,21 @@ A typical inference request flows through the system as follows:
 
 ```
 ┌──────────┐         ┌─────────────┐         ┌──────────────┐
-│  Client  │────────▶│  FastAPI    │────────▶│  Validator   │
+│  Client  │────────▶  FastAPI    ───────▶     Validator   │
 │ (Next.js)│  POST   │   Router    │         │  (image,     │
 └──────────┘  /jobs  └─────────────┘         │   schema)    │
      ▲                     │                 └──────┬───────┘
      │                     │                        │
      │ poll /jobs/{id}     ▼                        ▼
      │              ┌─────────────┐         ┌──────────────┐
-     │              │ Job Service │◀────────│  Hash Cache  │
+     │              │ Job Service │◀────────│  Hash Cache │
      │              │ (in-memory  │  hit?   │   Lookup     │
      │              │  queue)     │         └──────────────┘
      │              └──────┬──────┘                │
      │                     │                       │ miss
      │                     ▼                       ▼
      │              ┌─────────────┐         ┌──────────────┐
-     │              │  Worker     │◀────────│   Model      │
+     │              │  Worker     │◀───────│   Model      │
      │              │  (asyncio   │  load   │   Registry   │
      │              │   task)     │         │   (YAML)     │
      │              └──────┬──────┘         └──────────────┘
@@ -107,7 +164,7 @@ A typical inference request flows through the system as follows:
      │              ┌─────────────────────────────────────┐
      │              │      Inference Pipeline             │
      │              │  ┌────────┐  ┌─────────┐  ┌──────┐  │
-     │              │  │Forward │─▶│ Feature │─▶│Grad- │  │
+     │              │  │Forward │─▶│ Feature │─▶│Grad-   │ 
      │              │  │ Pass   │  │  Maps   │  │ CAM  │  │
      │              │  └────────┘  └─────────┘  └──────┘  │
      │              └──────────────┬──────────────────────┘
@@ -254,6 +311,28 @@ the polling endpoint becomes a measurable percentage of total CPU, SSE is the
 recommended migration path. SSE is preferred over WebSockets because the
 communication is unidirectional (server → client) and SSE works through standard
 HTTP infrastructure without protocol upgrades.
+
+#### Decision 6 — Dual deployment targets via storage abstraction
+
+**Context.** The project originally deployed only to Railway. Adding AWS as a
+second target without forking the codebase or breaking Railway required the storage
+layer to be backend-agnostic.
+
+**Decision.** A factory function reads `STORAGE_BACKEND` from env and returns
+either a `FilesystemStorage` instance (Railway) or an `S3Storage` instance (AWS
+Lambda). Both implement the same interface; call sites are unchanged. The FastAPI
+app is wrapped at module scope with `Mangum(app)` so the same ASGI application runs
+under uvicorn on Railway and under Lambda's runtime on AWS without conditional
+branching.
+
+**Rationale.** This was directly enabled by Decision 4's storage interface
+abstraction. The cost was one new `S3Storage` class plus a small factory. The
+benefit is the same code runs on two clouds, demonstrating that the abstraction was
+real, not theoretical.
+
+**What this isn't.** A multi-cloud strategy in any serious sense — there's no
+failover or load balancing between Railway and AWS. They're two independent
+deployments of the same code, switched at deploy time.
 
 ### Performance Engineering
 
@@ -439,7 +518,13 @@ cnn-lens/
 │   ├── storage/         # Generated visual assets (gitignored)
 │   ├── tests/           # Backend test suite
 │   ├── model_registry.yaml  # Model configuration registry
+│   ├── Dockerfile       # Railway / Docker Compose image
+│   ├── Dockerfile.lambda    # AWS Lambda container image
+│   ├── template.yaml    # AWS SAM deployment template
 │   └── requirements.txt # Python dependencies
+│
+├── docs/
+│   └── aws-deploy.md    # AWS Lambda deploy walkthrough
 │
 └── frontend/            # Next.js TypeScript frontend
     ├── app/             # Next.js App Router pages
@@ -499,6 +584,9 @@ curl "http://localhost:8000/api/v1/jobs/{job_id}"
 - `MODEL_REGISTRY_PATH`: Path to model registry YAML file (default: `./model_registry.yaml`)
 - `CACHE_ENABLED`: Enable/disable image hash caching (default: `true`)
 - `CACHE_MAX_ITEMS`: Maximum cache entries (default: `100`)
+- `STORAGE_BACKEND`: Storage backend selector — `filesystem` (default, used by Railway) or `s3` (used by AWS Lambda)
+- `S3_BUCKET`: S3 bucket name for generated assets (required when `STORAGE_BACKEND=s3`)
+- `AWS_REGION`: AWS region for the S3 bucket (required when `STORAGE_BACKEND=s3`)
 
 **Frontend (.env.local)**
 
@@ -557,65 +645,6 @@ npm run lint
 - `components/FeatureMapGrid.tsx`: Feature map visualization grid
 - `lib/api.ts`: Type-safe API client
 
-## Deployment
-
-### Docker Compose Deployment
-
-The recommended deployment method uses Docker Compose for orchestration:
-
-```bash
-docker-compose up -d
-```
-
-**Service Configuration:**
-
-- Backend service exposes port 8000
-- Frontend service exposes port 3000
-- Storage directory is mounted as volume for persistence
-- Services communicate via internal Docker network
-
-### Railway (No Docker) Deploy
-
-Deploy both services using Railway's native builders:
-
-**FRONTEND Service:**
-- Build Command: `npm ci && npm run build`
-- Start Command: `npm run start -- -p $PORT`
-- Root Directory: `frontend`
-- Environment Variables:
-
-
-**BACKEND Service:**
-- Build Command: `pip install -r requirements.txt`
-- Start Command: `sh start.sh` (use `sh` to avoid permission issues)
-- Root Directory: `backend`
-- Environment Variables:
-
-  - `PORT` (automatically set by Railway, fallback to 8000)
-
-**Notes:**
-- Ensure both services are deployed as separate Railway services
-- Frontend service should reference backend service URL in `NEXT_PUBLIC_API_URL`
-- Backend start command uses `sh start.sh` to avoid execute permission issues
-- Storage directory will be ephemeral unless using Railway volumes
-
-### Production Considerations
-
-1. **Environment Configuration**: Use environment-specific configuration files
-2. **Reverse Proxy**: Deploy behind nginx or Traefik with SSL/TLS
-3. **Resource Limits**: Configure CPU and memory limits in docker-compose
-4. **Logging**: Implement structured logging with log aggregation
-5. **Monitoring**: Add health checks and metrics collection
-6. **Security**: Configure CORS origins, rate limiting, and input validation
-7. **Storage**: Use persistent volumes or cloud storage for generated assets
-
-### Health Checks
-
-Health check endpoints are configured in Dockerfiles:
-
-- Backend: `GET /api/v1/health`
-- Monitor service health: `docker-compose ps`
-
 ## Testing
 
 ### Backend Test Suite
@@ -644,4 +673,6 @@ cd backend
 python scripts/smoke_test.py
 ```
 
+## Recent Changes
 
+- Added AWS Lambda + S3 + API Gateway as a parallel deployment target via storage abstraction and Mangum ASGI adapter. Railway deployment unchanged.
